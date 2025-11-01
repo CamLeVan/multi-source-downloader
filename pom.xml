@@ -20,6 +20,8 @@
         <module>shared-model</module>
         <module>origin-server</module>
         <module>javafx-client</module>
+        <module>networking-core</module>
+        <module>p2p-tracker</module>
     </modules>
 
     <dependencyManagement>
