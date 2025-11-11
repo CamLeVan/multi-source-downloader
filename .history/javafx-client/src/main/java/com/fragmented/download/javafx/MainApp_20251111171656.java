@@ -2,6 +2,7 @@ import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 import com.fragmented.download.javafx.logic.p2p.PeerServer;
 import com.fragmented.download.javafx.logic.storage.JsonStateStorage;
+import com.fragmented.download.javafx.logic.vfs.VirtualDownloaderFS;
 import com.fragmented.download.javafx.logic.storage.SparseFileStorage;
 import com.fragmented.download.networking.OkHttpDownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
@@ -77,31 +78,28 @@ public class MainApp extends Application {
             // Optionally, show an alert to the user
         }
         
-        // 7. Mount the Virtual Filesystem in a background thread to avoid UI freeze
+        // 7. Mount the Virtual Filesystem
         VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(manifest, scheduler, pieceStorage, stateStorage, localFilePath);
-        new Thread(() -> {
-            try {
-                Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
-                if (!Files.exists(mountPoint)) {
-                    Files.createDirectories(mountPoint);
-                }
-                System.out.println("Attempting to mount VFS at: " + mountPoint);
-
-                String os = System.getProperty("os.name").toLowerCase();
-                if (os.contains("win")) {
-                    System.out.println("Running on Windows, using Dokan to mount.");
-                    this.vfs = new DokanFuse(virtualDownloaderFS);
-                    this.vfs.mount(mountPoint, true); // Blocking call
-                } else {
-                    System.out.println("Running on macOS/Linux, using FUSE to mount.");
-                    this.vfs = virtualDownloaderFS; // Assign instance for unmounting
-                    this.vfs.mount(mountPoint, true); // Blocking call
-                }
-            } catch (Exception e) {
-                System.err.println("FATAL: Failed to mount virtual filesystem. The application will continue without it.");
-                e.printStackTrace();
+        try {
+            Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
+            if (!Files.exists(mountPoint)) {
+               Files.createDirectories(mountPoint);
             }
-        }).start();
+            System.out.println("Attempting to mount VFS at: " + mountPoint);
+
+            String os = System.getProperty("os.name").toLowerCase();
+            if (os.contains("win")) {
+                System.out.println("Running on Windows, using Dokan to mount.");
+                this.vfs = new DokanFuse(virtualDownloaderFS);
+                this.vfs.mount(mountPoint);
+            } else {
+                System.out.println("Running on macOS/Linux, using FUSE to mount.");
+                virtualDownloaderFS.mount(mountPoint);
+            }
+        } catch (Exception e) {
+            System.err.println("FATAL: Failed to mount virtual filesystem. The application will continue without it.");
+            e.printStackTrace();
+        }
         // 8. Set up the UI
         URL fxmlLocation = getClass().getResource("/fxml/Dashboard.fxml");
         if (fxmlLocation == null) {
@@ -146,7 +144,7 @@ public class MainApp extends Application {
             if (vfs != null) {
                 vfs.unmount();
             }
-        } catch (Throwable e) { // Catch Throwable to handle native errors as well
+        } catch (Exception e) {
             System.err.println("Error while unmounting VFS: " + e.getMessage());
         }
         System.out.println("Shutting down application...");

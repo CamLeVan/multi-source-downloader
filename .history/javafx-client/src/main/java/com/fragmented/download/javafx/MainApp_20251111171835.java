@@ -2,6 +2,7 @@ import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 import com.fragmented.download.javafx.logic.p2p.PeerServer;
 import com.fragmented.download.javafx.logic.storage.JsonStateStorage;
+import com.fragmented.download.javafx.logic.vfs.VirtualDownloaderFS;
 import com.fragmented.download.javafx.logic.storage.SparseFileStorage;
 import com.fragmented.download.networking.OkHttpDownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
@@ -77,7 +78,7 @@ public class MainApp extends Application {
             // Optionally, show an alert to the user
         }
         
-        // 7. Mount the Virtual Filesystem in a background thread to avoid UI freeze
+        // 7. Mount the Virtual Filesystem
         VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(manifest, scheduler, pieceStorage, stateStorage, localFilePath);
         new Thread(() -> {
             try {
@@ -102,6 +103,7 @@ public class MainApp extends Application {
                 e.printStackTrace();
             }
         }).start();
+        
         // 8. Set up the UI
         URL fxmlLocation = getClass().getResource("/fxml/Dashboard.fxml");
         if (fxmlLocation == null) {
