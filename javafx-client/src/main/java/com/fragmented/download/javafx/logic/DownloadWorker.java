@@ -8,6 +8,8 @@ import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -57,6 +59,13 @@ public class DownloadWorker {
                 errorCallback.onDownloadFailed(piece, throwable);
             } else {
                 try {
+                    // Verify SHA-256 hash before writing to disk
+                    String calculatedHash = calculateSHA256(data);
+                    if (!calculatedHash.equalsIgnoreCase(piece.getHash())) {
+                        throw new IOException("Hash mismatch for piece " + piece.getId() +
+                                ". Expected: " + piece.getHash() + ", Got: " + calculatedHash);
+                    }
+
                     // 1. Write the downloaded piece to the file
                     long offset = (long) piece.getId() * pieceSize;
                     pieceStorage.writePiece(localFilePath, offset, data);
@@ -71,11 +80,36 @@ public class DownloadWorker {
                     // 3. On success, invoke the specific success callback with the data (e.g., for UI updates).
                     successCallback.accept(data);
 
-                } catch (IOException e) {
+                } catch (IOException | NoSuchAlgorithmException e) {
                     // Handle errors during file writing or state saving
                     errorCallback.onDownloadFailed(piece, e);
                 }
             }
         });
+    }
+
+    /**
+     * Calculates the SHA-256 hash of the given byte array.
+     *
+     * @param data The byte array to hash.
+     * @return The SHA-256 hash as a hexadecimal string.
+     * @throws NoSuchAlgorithmException If the SHA-256 algorithm is not available.
+     */
+    private String calculateSHA256(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] encodedhash = digest.digest(data);
+        return bytesToHex(encodedhash);
+    }
+
+    private static String bytesToHex(byte[] hash) {
+        StringBuilder hexString = new StringBuilder(2 * hash.length);
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
     }
 }

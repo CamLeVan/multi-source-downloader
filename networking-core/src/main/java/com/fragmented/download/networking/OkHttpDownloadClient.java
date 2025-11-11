@@ -5,11 +5,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An implementation of the DownloadClient interface that uses OkHttp for network requests.
- * It includes a robust retry mechanism with exponential backoff.
+ * It includes a robust retry mechanism with exponential backoff for each source.
  */
 public class OkHttpDownloadClient implements DownloadClient {
 
@@ -23,50 +26,29 @@ public class OkHttpDownloadClient implements DownloadClient {
     public OkHttpDownloadClient(OkHttpClient httpClient, int numberOfThreads, long pieceSize) {
         this.httpClient = httpClient;
         this.pieceSize = pieceSize;
-        // A single-threaded scheduler is sufficient for managing retry tasks.
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "okhttp-retry-scheduler"));
+        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "okhttp-retry-scheduler");
+            t.setDaemon(true);
+            return t;
+        });
     }
 
     @Override
     public CompletableFuture<byte[]> downloadPiece(PieceModel piece) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        // Start the first download attempt cycle without any delay.
-        attemptDownloadCycle(piece, 0, future);
+        // Start the process by trying the first source. The logic will fallback to the next source if needed.
+        tryPieceFromSource(piece, 0, future);
         return future;
     }
 
     /**
-     * Represents a full attempt to download a piece by trying all its sources.
-     * If this attempt is a retry, it's scheduled with an exponential backoff delay.
+     * Attempts to download a piece from a specific source URL, identified by its index.
+     * If this source fails permanently, it will proceed to the next source.
      */
-    private void attemptDownloadCycle(PieceModel piece, int retryCount, CompletableFuture<byte[]> future) {
-        if (retryCount > 0) {
-            long delayMs = (long) (Math.pow(2, retryCount - 1) * INITIAL_BACKOFF_MS);
-            System.out.println("Scheduling retry " + retryCount + " for piece " + piece.getId() + " after " + delayMs + " ms.");
-            scheduler.schedule(() -> tryAllSources(piece, 0, retryCount, future), delayMs, TimeUnit.MILLISECONDS);
-        } else {
-            // First attempt, run immediately.
-            tryAllSources(piece, 0, retryCount, future);
-        }
-    }
-
-    /**
-     * Recursively tries to download a piece from the list of available sources.
-     * If all sources fail, it triggers the next retry cycle.
-     */
-    private void tryAllSources(PieceModel piece, int sourceIndex, int retryCount, CompletableFuture<byte[]> future) {
-        // Base case: If we've exhausted all sources for this piece.
+    private void tryPieceFromSource(PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
+        // If we've exhausted all available sources for this piece, the download fails.
         if (sourceIndex >= piece.getSources().size()) {
-            // Check if we can still retry.
-            if (retryCount < MAX_RETRIES) {
-                // Move to the next retry cycle.
-                attemptDownloadCycle(piece, retryCount + 1, future);
-            } else {
-                // All retries exhausted, fail the download permanently.
-                String errorMessage = "Failed to download piece " + piece.getId() + " from all sources after " + MAX_RETRIES + " retries.";
-                System.err.println(errorMessage);
-                future.completeExceptionally(new IOException(errorMessage));
-            }
+            future.completeExceptionally(new IOException("Failed to download piece " + piece.getId() + " from all available sources."));
             return;
         }
 
@@ -79,34 +61,71 @@ public class OkHttpDownloadClient implements DownloadClient {
                 .header("Range", "bytes=" + start + "-" + end)
                 .build();
 
+        // Execute the request for the current source, starting with retry count 0.
+        executeWithRetry(request, 0, piece, sourceIndex, future);
+    }
+
+    /**
+     * Executes a request and handles the retry logic using a callback.
+     */
+    private void executeWithRetry(Request request, int retryCount, PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                System.err.println("Failed to download piece " + piece.getId() + " from " + sourceUrl + ": " + e.getMessage());
-                // Try the next source.
-                tryAllSources(piece, sourceIndex + 1, retryCount, future);
+                // A network-level error occurred, attempt a retry.
+                handleFailure(call, e, retryCount, piece, sourceIndex, future);
             }
 
             @Override
-            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                try (ResponseBody body = response.body()) {
-                    // Success is 2xx or specifically 206 Partial Content.
-                    if (response.isSuccessful()) {
-                        Objects.requireNonNull(body, "Response body is null");
-                        System.out.println("Successfully downloaded piece " + piece.getId() + " from " + sourceUrl);
-                        future.complete(body.bytes());
-                    } else {
-                        // For 4xx or 5xx errors, we treat this source as failed and try the next one.
-                        System.err.println("Failed to download piece " + piece.getId() + " from " + sourceUrl + ". Status: " + response.code());
-                        tryAllSources(piece, sourceIndex + 1, retryCount, future);
-                    }
+            public void onResponse(@NotNull Call call, @NotNull Response response) {
+                // 5xx errors are server-side and might be transient, so we should retry.
+                if (response.code() >= 500) {
+                    handleFailure(call, new IOException("Server error: " + response.code()), retryCount, piece, sourceIndex, future);
+                    response.close();
+                    return;
                 }
+
+                // 2xx indicates success.
+                if (response.isSuccessful()) {
+                    try (ResponseBody body = response.body()) {
+                        Objects.requireNonNull(body, "Response body is null");
+                        future.complete(body.bytes());
+                    } catch (IOException e) {
+                        future.completeExceptionally(e);
+                    }
+                    return;
+                }
+
+                // Any other error (like a 4xx client error) is considered a permanent failure for this source.
+                // We do not retry; we move directly to the next available source.
+                System.err.println("Unrecoverable error for " + request.url() + ": " + response.code() + ". Trying next source.");
+                response.close();
+                tryPieceFromSource(piece, sourceIndex + 1, future);
             }
         });
     }
 
     /**
-     * Shuts down the internal executor services. This should be called when the client is no longer needed.
+     * Handles a failure by either scheduling a retry with exponential backoff or moving to the next source.
+     */
+    private void handleFailure(Call call, IOException e, int retryCount, PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
+        // Check if we still have retries left for the current source.
+        if (retryCount < MAX_RETRIES) {
+            long delayMs = (long) (Math.pow(2, retryCount) * INITIAL_BACKOFF_MS);
+            System.err.println("Retrying piece " + piece.getId() + " from " + call.request().url() + " in " + delayMs + " ms. Attempt " + (retryCount + 1) + "/" + MAX_RETRIES + ". Error: " + e.getMessage());
+
+            scheduler.schedule(() -> {
+                executeWithRetry(call.request(), retryCount + 1, piece, sourceIndex, future);
+            }, delayMs, TimeUnit.MILLISECONDS);
+        } else {
+            // No retries left for this source, so we move to the next one.
+            System.err.println("Max retries reached for " + call.request().url() + ". Trying next source.");
+            tryPieceFromSource(piece, sourceIndex + 1, future);
+        }
+    }
+
+    /**
+     * Shuts down the internal executor service. This should be called when the client is no longer needed.
      */
     public void shutdown() {
         this.scheduler.shutdownNow();

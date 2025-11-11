@@ -2,7 +2,6 @@ import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 import com.fragmented.download.javafx.logic.p2p.PeerServer;
 import com.fragmented.download.javafx.logic.storage.JsonStateStorage;
-import com.fragmented.download.javafx.logic.vfs.VirtualDownloaderFS;
 import com.fragmented.download.javafx.logic.storage.SparseFileStorage;
 import com.fragmented.download.networking.OkHttpDownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
@@ -17,22 +16,18 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import ru.serce.jnrfuse.DokanFuse;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.file.Files;
 import java.net.URL;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class MainApp extends Application {
 
     private static final String MANIFEST_URL = "http://localhost:8080/manifest/100MB.zip";
-    private static final String VFS_MOUNT_DIR = "downloader-vfs";
 
     private Scheduler scheduler;
     private OkHttpDownloadClient downloadClient;
@@ -75,30 +70,8 @@ public class MainApp extends Application {
             e.printStackTrace();
             // Optionally, show an alert to the user
         }
-        
-        // 7. Mount the Virtual Filesystem
-        VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(manifest, scheduler, pieceStorage, stateStorage, localFilePath);
-        try {
-            Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
-            if (!Files.exists(mountPoint)) {
-                Files.createDirectories(mountPoint);
-            }
-            System.out.println("Attempting to mount VFS at: " + mountPoint);
 
-            String os = System.getProperty("os.name").toLowerCase();
-            if (os.contains("win")) {
-                System.out.println("Running on Windows, using Dokan to mount.");
-                DokanFuse dokanFuse = new DokanFuse(virtualDownloaderFS);
-                dokanFuse.mount(mountPoint);
-            } else {
-                System.out.println("Running on macOS/Linux, using FUSE to mount.");
-                virtualDownloaderFS.mount(mountPoint);
-            }
-        } catch (Exception e) {
-            System.err.println("FATAL: Failed to mount virtual filesystem. The application will continue without it.");
-            e.printStackTrace();
-        }
-        // 8. Set up the UI
+        // 7. Set up the UI
         URL fxmlLocation = getClass().getResource("/fxml/Dashboard.fxml");
         if (fxmlLocation == null) {
             throw new IOException("Cannot find FXML file. Make sure it's in the resources/fxml directory.");
@@ -106,7 +79,8 @@ public class MainApp extends Application {
 
         FXMLLoader loader = new FXMLLoader(fxmlLocation);
         Parent root = loader.load();
-        // 9. Pass the scheduler to the controller
+
+        // 8. Pass the scheduler to the controller
         DashboardController controller = loader.getController();
         controller.setScheduler(scheduler);
 
@@ -114,7 +88,7 @@ public class MainApp extends Application {
         primaryStage.setScene(new Scene(root, 800, 600));
         primaryStage.show();
 
-        // 10. Start the download
+        // 9. Start the download
         scheduler.start();
     }
 

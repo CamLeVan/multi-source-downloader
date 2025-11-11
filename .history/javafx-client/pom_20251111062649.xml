@@ -52,11 +52,6 @@
             <artifactId>jnr-fuse</artifactId>
             <version>0.5.8</version>
         </dependency>
-        <dependency>
-            <groupId>com.github.jnr</groupId>
-            <artifactId>jnr-dokan</artifactId>
-            <version>0.1.0</version>
-        </dependency>
 
     </dependencies>
 
