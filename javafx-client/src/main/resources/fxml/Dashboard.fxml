@@ -1,20 +1,213 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ProgressBar?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.text.*?>
 <?import javafx.geometry.Insets?>
 
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+<BorderPane xmlns="http://javafx.com/javafx/17" 
+            xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.fragmented.download.javafx.controller.DashboardController"
-      alignment="CENTER" spacing="20.0">
+            styleClass="root-pane"
+            stylesheets="@../css/dashboard.css">
 
+    <!-- Header Section -->
+    <top>
+        <VBox styleClass="header-section" spacing="15">
+            <padding>
+                <Insets top="20" right="30" bottom="20" left="30"/>
+            </padding>
+            
+            <!-- File Info -->
+            <HBox alignment="CENTER_LEFT" spacing="15">
+                <Label text="📁" styleClass="icon-large"/>
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label fx:id="fileNameLabel" text="Loading file..." styleClass="file-name"/>
+                    <Label fx:id="fileSizeLabel" text="Size: 0 MB" styleClass="file-info"/>
+                </VBox>
+                <VBox alignment="TOP_RIGHT" spacing="5">
+                    <Label fx:id="progressPercentLabel" text="0%" styleClass="progress-percent"/>
+                    <Label fx:id="etaLabel" text="ETA: Calculating..." styleClass="eta-label"/>
+                </VBox>
+            </HBox>
+            
+            <!-- Overall Progress Bar with Gradient -->
+            <VBox spacing="5">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Overall Progress" styleClass="section-title"/>
+                    <Label fx:id="downloadSpeedLabel" text="0 MB/s" styleClass="speed-label"/>
+                </HBox>
+                <ProgressBar fx:id="overallProgressBar" 
+                             prefWidth="Infinity" 
+                             prefHeight="30" 
+                             progress="0.0"
+                             styleClass="modern-progress-bar"/>
+            </VBox>
+        </VBox>
+    </top>
+
+    <!-- Main Content -->
+    <center>
+        <SplitPane dividerPositions="0.65" styleClass="content-split">
+            <!-- Left: Stats & Piece Grid -->
+            <VBox spacing="20">
+                <padding>
+                    <Insets top="20" right="15" bottom="20" left="30"/>
+                </padding>
+                
+                <!-- Real-time Speed Chart -->
+                <VBox spacing="10" styleClass="card">
+                    <padding>
+                        <Insets topRightBottomLeft="15"/>
+                    </padding>
+                    <Label text="📊 Download Speed (Real-time)" styleClass="section-title"/>
+                    <LineChart fx:id="speedChart" 
+                               prefHeight="180"
+                               legendVisible="false"
+                               animated="true"
+                               styleClass="speed-chart">
+                        <xAxis>
+                            <CategoryAxis label="Time" side="BOTTOM"/>
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis label="MB/s" side="LEFT" autoRanging="true"/>
+                        </yAxis>
+                    </LineChart>
+                </VBox>
+                
+                <!-- Piece Progress Grid (Heatmap) -->
+                <VBox spacing="10" styleClass="card" VBox.vgrow="ALWAYS">
+                    <padding>
+                        <Insets topRightBottomLeft="15"/>
+                    </padding>
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="🧩 Pieces Progress" styleClass="section-title"/>
+                        <Label fx:id="piecesCompletedLabel" text="0 / 0" styleClass="pieces-count"/>
+                    </HBox>
+                    <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="piece-grid-scroll">
+                        <GridPane fx:id="pieceGridPane" 
+                                  hgap="3" vgap="3" 
+                                  styleClass="piece-grid"/>
+                    </ScrollPane>
+                    <!-- Legend -->
+                    <HBox spacing="15" alignment="CENTER">
+                        <HBox spacing="5" alignment="CENTER_LEFT">
+                            <Region styleClass="legend-box, legend-not-downloaded"/>
+                            <Label text="Not Downloaded" styleClass="legend-text"/>
+                        </HBox>
+                        <HBox spacing="5" alignment="CENTER_LEFT">
+                            <Region styleClass="legend-box, legend-downloading"/>
+                            <Label text="Downloading" styleClass="legend-text"/>
+                        </HBox>
+                        <HBox spacing="5" alignment="CENTER_LEFT">
+                            <Region styleClass="legend-box, legend-completed"/>
+                            <Label text="Completed" styleClass="legend-text"/>
+                        </HBox>
+                        <HBox spacing="5" alignment="CENTER_LEFT">
+                            <Region styleClass="legend-box, legend-error"/>
+                            <Label text="Error" styleClass="legend-text"/>
+                        </HBox>
+                    </HBox>
+                </VBox>
+            </VBox>
+            
+            <!-- Right: Sources & Controls -->
+            <VBox spacing="20">
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+                    <Insets top="20" right="30" bottom="20" left="15"/>
     </padding>
 
-    <Label text="Overall Download Progress"/>
-
-    <ProgressBar fx:id="overallProgressBar" prefWidth="600.0" progress="0.0"/>
-
+                <!-- Active Sources Panel -->
+                <VBox spacing="10" styleClass="card">
+                    <padding>
+                        <Insets topRightBottomLeft="15"/>
+                    </padding>
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="🌐 Active Sources" styleClass="section-title"/>
+                        <Label fx:id="activeSourcesCountLabel" text="0" styleClass="badge"/>
+                    </HBox>
+                    <ScrollPane fitToWidth="true" prefHeight="200" styleClass="sources-scroll">
+                        <VBox fx:id="sourcesListContainer" spacing="8"/>
+                    </ScrollPane>
+                </VBox>
+                
+                <!-- AI Anomaly Alerts -->
+                <VBox spacing="10" styleClass="card, alert-card">
+                    <padding>
+                        <Insets topRightBottomLeft="15"/>
+                    </padding>
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="⚠️ Anomaly Alerts" styleClass="section-title"/>
+                        <Label fx:id="anomalyCountLabel" text="0" styleClass="badge, badge-warning"/>
+                    </HBox>
+                    <ScrollPane fitToWidth="true" prefHeight="120" styleClass="alerts-scroll">
+                        <VBox fx:id="alertsContainer" spacing="5"/>
+                    </ScrollPane>
+                </VBox>
+                
+                <!-- Cache Control -->
+                <VBox spacing="10" styleClass="card">
+                    <padding>
+                        <Insets topRightBottomLeft="15"/>
+                    </padding>
+                    <Label text="💾 Cache Settings" styleClass="section-title"/>
+                    
+                    <VBox spacing="5">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Quota:" styleClass="control-label"/>
+                            <Label fx:id="cacheQuotaLabel" text="5 GB" styleClass="control-value"/>
+                        </HBox>
+                        <Slider fx:id="cacheQuotaSlider" 
+                                min="1" max="10" value="5" 
+                                showTickLabels="true" showTickMarks="true"
+                                majorTickUnit="1" minorTickCount="0"
+                                snapToTicks="true"
+                                styleClass="cache-slider"/>
+                    </VBox>
+                    
+                    <Separator/>
+                    
+                    <VBox spacing="8">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Usage:" styleClass="control-label"/>
+                            <Label fx:id="cacheUsageLabel" text="0 MB / 5 GB" styleClass="control-value"/>
+                        </HBox>
+                        <ProgressBar fx:id="cacheUsageBar" 
+                                     prefWidth="Infinity" 
+                                     progress="0.0"
+                                     styleClass="cache-progress-bar"/>
+                        <HBox spacing="15" alignment="CENTER_LEFT">
+                            <Label text="Hit Rate:" styleClass="stat-label"/>
+                            <Label fx:id="cacheHitRateLabel" text="0%" styleClass="stat-value"/>
+                            <Label text="Evictions:" styleClass="stat-label"/>
+                            <Label fx:id="cacheEvictionsLabel" text="0" styleClass="stat-value"/>
+                        </HBox>
+                    </VBox>
 </VBox>
+                
+                <!-- Action Buttons -->
+                <HBox spacing="10" alignment="CENTER">
+                    <Button fx:id="pauseButton" text="⏸ Pause" styleClass="action-button"/>
+                    <Button fx:id="resumeButton" text="▶ Resume" styleClass="action-button" disable="true"/>
+                    <Button fx:id="cancelButton" text="✖ Cancel" styleClass="action-button, danger-button"/>
+                </HBox>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <!-- Footer: Status Bar -->
+    <bottom>
+        <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="20">
+            <padding>
+                <Insets topRightBottomLeft="15"/>
+            </padding>
+            <Label fx:id="statusLabel" text="Ready" styleClass="status-text"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="peersCountLabel" text="👥 Peers: 0" styleClass="status-text"/>
+            <Separator orientation="VERTICAL"/>
+            <Label fx:id="downloadedBytesLabel" text="Downloaded: 0 MB" styleClass="status-text"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>

@@ -1,3 +1,5 @@
+package com.fragmented.download.javafx;
+
 import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 import com.fragmented.download.javafx.logic.p2p.PeerServer;

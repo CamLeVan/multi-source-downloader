@@ -1,0 +1,8 @@
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/MainApp.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/controller/DashboardController.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/logic/DownloadWorker.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/logic/Scheduler.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/logic/p2p/PeerServer.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/logic/p2p/PieceHandler.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/logic/storage/JsonStateStorage.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/javafx-client/src/main/java/com/fragmented/download/javafx/logic/storage/SparseFileStorage.java

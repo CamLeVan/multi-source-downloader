@@ -1,3 +1,5 @@
+package com.fragmented.download.javafx.logic;
+
 import com.fragmented.download.core.client.DownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
 import com.fragmented.download.core.model.DownloadState;
