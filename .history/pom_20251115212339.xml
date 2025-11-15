@@ -18,21 +18,15 @@
 
     <modules>
         <module>shared-model</module>
-        <module>networking-core</module>
         <module>origin-server</module>
-        <module>p2p-tracker</module>
         <module>javafx-client</module>
+        <module>networking-core</module>
+        <module>p2p-tracker</module>
     </modules>
 
-    <repositories>
-        <repository>
-            <id>dokan-java-mvn-repo</id>
-            <name>Dokan-Java Maven Repository</name>
-            <url>https://raw.github.com/dokan-dev/dokan-java-mvn-repo/master</url>
-        </repository>
-    </repositories>
     <dependencyManagement>
         <dependencies>
+            <!-- Spring Boot Bill of Materials (BOM) -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>

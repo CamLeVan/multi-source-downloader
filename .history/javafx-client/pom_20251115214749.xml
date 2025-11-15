@@ -14,17 +14,20 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <!-- Internal dependency -->
         <dependency>
             <groupId>com.fragmented.download</groupId>
             <artifactId>shared-model</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.fragmented.download</groupId>
             <artifactId>networking-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
+        <!-- JavaFX dependencies -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -36,12 +39,14 @@
             <version>17.0.6</version>
         </dependency>
 
+        <!-- JSON parsing -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
 
+        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -51,20 +56,23 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>2.0.9</version>
-            <scope>runtime</scope> </dependency>
+        </dependency>
 
+        <!-- Filesystem in Userspace (FUSE) for virtual file mounting -->
+        <!-- Tuần 4: VirtualFS implementation - macOS/Linux only (Windows requires Dokan which is not available) -->
         <dependency>
             <groupId>com.github.serceman</groupId>
             <artifactId>jnr-fuse</artifactId>
             <version>0.5.8</version>
         </dependency>
-        
+        <!-- Note: jnr-dokan không tồn tại, Windows sẽ không support VirtualFS -->
         <dependency>
             <groupId>dev.dokan</groupId>
             <artifactId>dokan-java-binding</artifactId>
             <version>2.0.5.1</version> </dependency>
         
         </dependencies>
+    </dependencies>
 
     <build>
         <plugins>
