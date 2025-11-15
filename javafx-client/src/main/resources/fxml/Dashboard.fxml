@@ -7,14 +7,24 @@
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.fragmented.download.javafx.controller.DashboardController"
-      alignment="CENTER" spacing="20.0">
+      alignment="CENTER" spacing="15.0" styleClass="dashboard">
 
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0"/>
     </padding>
 
-    <Label text="Overall Download Progress"/>
+    <!-- Overall Progress -->
+    <Label text="Overall Download Progress" styleClass="title-label"/>
+    <ProgressBar fx:id="overallProgressBar" prefWidth="600.0" progress="0.0" styleClass="overall-progress"/>
 
-    <ProgressBar fx:id="overallProgressBar" prefWidth="600.0" progress="0.0"/>
+    <!-- Tuần 2: Per-Source Progress Bars với CSS Gradient -->
+    <Label text="Origin Server" styleClass="source-label"/>
+    <ProgressBar fx:id="originProgressBar" prefWidth="600.0" progress="0.0" styleClass="origin-progress"/>
+
+    <Label text="Mirror Server" styleClass="source-label"/>
+    <ProgressBar fx:id="mirrorProgressBar" prefWidth="600.0" progress="0.0" styleClass="mirror-progress"/>
+
+    <Label text="P2P Peers" styleClass="source-label"/>
+    <ProgressBar fx:id="peerProgressBar" prefWidth="600.0" progress="0.0" styleClass="peer-progress"/>
 
 </VBox>

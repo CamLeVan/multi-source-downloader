@@ -1,8 +1,11 @@
+package com.fragmented.download.javafx;
+
 import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 import com.fragmented.download.javafx.logic.p2p.PeerServer;
 import com.fragmented.download.javafx.logic.storage.JsonStateStorage;
 import com.fragmented.download.javafx.logic.storage.SparseFileStorage;
+import com.fragmented.download.javafx.logic.vfs.VirtualDownloaderFS;
 import com.fragmented.download.networking.OkHttpDownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
 import com.fragmented.download.core.model.ManifestModel;
@@ -14,18 +17,16 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import ru.serce.jnrfuse.AbstractFuseFS;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import ru.serce.jnrfuse.DokanFuse;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.file.Files;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -37,7 +38,8 @@ public class MainApp extends Application {
     private Scheduler scheduler;
     private OkHttpDownloadClient downloadClient;
     private PeerServer peerServer;
-    private AbstractFuseFS vfs; // Reference to the mounted filesystem for unmounting
+    private DashboardController dashboardController; // Tuần 3: Reference để trigger shake animation
+    private VirtualDownloaderFS vfs; // Tuần 4: Reference to the mounted filesystem for unmounting
     private final OkHttpClient httpClient = new OkHttpClient();
 
     @Override
@@ -59,9 +61,32 @@ public class MainApp extends Application {
 
         // 4. Set up backend components
         downloadClient = new OkHttpDownloadClient(httpClient, 4, manifest.getPieceSize());
+        
+        // Enhanced ErrorCallback - Tuần 2 & 3: Handle timeout, network errors, và SHA-256 mismatch
         ErrorCallback errorCallback = (piece, cause) -> {
-            System.err.println("FATAL: Download failed for piece " + piece.getId());
-            cause.printStackTrace();
+            // Phân loại lỗi
+            if (cause instanceof java.util.concurrent.TimeoutException) {
+                System.err.println("TIMEOUT: Piece " + piece.getId() + " from source. Switching to alternative source...");
+            } else if (cause instanceof java.io.IOException) {
+                String message = cause.getMessage();
+                if (message != null && message.contains("Hash mismatch")) {
+                    // Tuần 3: SHA-256 verification failed
+                    System.err.println("SHA-256 MISMATCH: Piece " + piece.getId() + " - " + message);
+                } else {
+                    System.err.println("NETWORK ERROR: Piece " + piece.getId() + " - " + message);
+                }
+            } else {
+                System.err.println("FATAL: Download failed for piece " + piece.getId());
+                cause.printStackTrace();
+            }
+            
+            // Tuần 3: Trigger shake animation khi có lỗi
+            if (dashboardController != null) {
+                dashboardController.triggerShakeAnimation();
+            }
+            
+            // Note: Scheduler sẽ tự động retry piece này qua source khác
+            // do OkHttpDownloadClient đã có multi-source fallback logic
         };
 
         // 5. Create the scheduler, now with storage logic
@@ -78,7 +103,11 @@ public class MainApp extends Application {
         }
         
         // 7. Mount the Virtual Filesystem in a background thread to avoid UI freeze
-        VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(manifest, scheduler, pieceStorage, stateStorage, localFilePath);
+        // Tuần 4: VirtualFS implementation with on-demand download
+        VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(
+            manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
+        );
+        
         new Thread(() -> {
             try {
                 Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
@@ -89,19 +118,20 @@ public class MainApp extends Application {
 
                 String os = System.getProperty("os.name").toLowerCase();
                 if (os.contains("win")) {
-                    System.out.println("Running on Windows, using Dokan to mount.");
-                    this.vfs = new DokanFuse(virtualDownloaderFS);
-                    this.vfs.mount(mountPoint, true); // Blocking call
+                    System.err.println("WARNING: VirtualFS not supported on Windows (jnr-dokan unavailable).");
+                    System.err.println("Application will continue without VirtualFS.");
                 } else {
+                    // macOS/Linux using FUSE
                     System.out.println("Running on macOS/Linux, using FUSE to mount.");
-                    this.vfs = virtualDownloaderFS; // Assign instance for unmounting
-                    this.vfs.mount(mountPoint, true); // Blocking call
+                    this.vfs = virtualDownloaderFS;
+                    this.vfs.mount(mountPoint, true, false); // Blocking call
                 }
             } catch (Exception e) {
-                System.err.println("FATAL: Failed to mount virtual filesystem. The application will continue without it.");
+                System.err.println("ERROR: Failed to mount virtual filesystem. The application will continue without it.");
                 e.printStackTrace();
             }
-        }).start();
+        }, "vfs-mount-thread").start();
+        
         // 8. Set up the UI
         URL fxmlLocation = getClass().getResource("/fxml/Dashboard.fxml");
         if (fxmlLocation == null) {
@@ -111,11 +141,20 @@ public class MainApp extends Application {
         FXMLLoader loader = new FXMLLoader(fxmlLocation);
         Parent root = loader.load();
         // 9. Pass the scheduler to the controller
-        DashboardController controller = loader.getController();
-        controller.setScheduler(scheduler);
+        dashboardController = loader.getController(); // Tuần 3: Store reference
+        dashboardController.setScheduler(scheduler);
+
+        // Tuần 2: Apply CSS Gradient styling
+        Scene scene = new Scene(root, 800, 600);
+        URL cssLocation = getClass().getResource("/styles/dashboard.css");
+        if (cssLocation != null) {
+            scene.getStylesheets().add(cssLocation.toExternalForm());
+        } else {
+            System.err.println("WARNING: CSS file not found. UI will use default styling.");
+        }
 
         primaryStage.setTitle("Multi-Source Downloader");
-        primaryStage.setScene(new Scene(root, 800, 600));
+        primaryStage.setScene(scene);
         primaryStage.show();
 
         // 10. Start the download
@@ -141,15 +180,18 @@ public class MainApp extends Application {
     @Override
     public void stop() {
         // Clean up resources in reverse order of creation
+        System.out.println("Shutting down application...");
+        
+        // Tuần 4: Unmount VirtualFS before closing other resources
         System.out.println("Unmounting virtual filesystem...");
         try {
             if (vfs != null) {
-                vfs.unmount();
+                vfs.umount();
             }
         } catch (Throwable e) { // Catch Throwable to handle native errors as well
             System.err.println("Error while unmounting VFS: " + e.getMessage());
         }
-        System.out.println("Shutting down application...");
+        
         if (peerServer != null) {
             peerServer.close();
         }

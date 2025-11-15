@@ -73,6 +73,8 @@ public class PieceHandler implements HttpHandler {
                 log.info("Serving piece {} for file {}", pieceIndex, this.fileId);
                 byte[] data = pieceStorage.readPiece(this.localFilePath, offset, (int) length);
 
+                // Improvement: Set Content-Type header for binary data (best practice)
+                exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
                 exchange.sendResponseHeaders(200, data.length);
                 try (OutputStream os = exchange.getResponseBody()) {
                     os.write(data);

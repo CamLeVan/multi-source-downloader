@@ -1,3 +1,5 @@
+package com.fragmented.download.networking;
+
 import com.fragmented.download.core.client.DownloadClient;
 import com.fragmented.download.core.model.PieceModel;
 import okhttp3.*;

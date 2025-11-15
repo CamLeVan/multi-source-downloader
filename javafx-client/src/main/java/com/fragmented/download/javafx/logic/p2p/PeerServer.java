@@ -16,22 +16,70 @@ public class PeerServer implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(PeerServer.class);
     public static final int DEFAULT_PORT = 6881;
+    private static final int MAX_PORT_ATTEMPTS = 10; // Try 10 ports (6881-6890)
 
     private final HttpServer server;
+    private final int actualPort; // Port actually used (may differ from DEFAULT_PORT if conflict)
     private final ExecutorService serverExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "peer-server-thread"));
 
     public PeerServer(IStateStorage stateStorage, PieceStorage pieceStorage, ManifestModel manifest, String fileId, String localFilePath) throws IOException {
-        this.server = HttpServer.create(new InetSocketAddress(DEFAULT_PORT), 0);
+        // Improvement: Port conflict handling - try multiple ports if DEFAULT_PORT is busy
+        HttpServer createdServer = null;
+        int portUsed = DEFAULT_PORT;
+        
+        for (int attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++) {
+            int portToTry = DEFAULT_PORT + attempt;
+            try {
+                createdServer = HttpServer.create(new InetSocketAddress(portToTry), 0);
+                portUsed = portToTry;
+                if (attempt > 0) {
+                    log.warn("Port {} was busy, using port {} instead", DEFAULT_PORT, portUsed);
+                }
+                break;
+            } catch (IOException e) {
+                if (attempt == MAX_PORT_ATTEMPTS - 1) {
+                    // Last attempt failed, throw exception
+                    throw new IOException("Failed to create PeerServer: Could not bind to any port in range " + 
+                                        DEFAULT_PORT + "-" + (DEFAULT_PORT + MAX_PORT_ATTEMPTS - 1), e);
+                }
+                // Try next port
+                log.debug("Port {} is busy, trying next port...", portToTry);
+            }
+        }
+        
+        this.server = createdServer;
+        this.actualPort = portUsed;
+        
         // The context is /piece, the handler will parse the rest of the URI
         this.server.createContext("/piece", new PieceHandler(stateStorage, pieceStorage, manifest, fileId, localFilePath));
+        
+        // Improvement: Health check endpoint for monitoring and debugging
+        this.server.createContext("/health", exchange -> {
+            try {
+                exchange.sendResponseHeaders(200, 0);
+                exchange.close();
+            } catch (IOException e) {
+                log.error("Error handling health check", e);
+            }
+        });
+        
         this.server.setExecutor(Executors.newCachedThreadPool()); // Handle multiple requests concurrently
+    }
+    
+    /**
+     * Get the actual port the server is listening on.
+     * May differ from DEFAULT_PORT if there was a port conflict.
+     * @return The port number
+     */
+    public int getActualPort() {
+        return actualPort;
     }
 
     public void start() {
         serverExecutor.submit(() -> {
-            log.info("PeerServer starting on port {}", DEFAULT_PORT);
+            log.info("PeerServer starting on port {}", actualPort);
             server.start();
-            log.info("PeerServer started successfully.");
+            log.info("PeerServer started successfully on port {}", actualPort);
         });
     }
 

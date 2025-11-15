@@ -61,9 +61,9 @@ public class DownloadWorker {
                 try {
                     // Verify SHA-256 hash before writing to disk
                     String calculatedHash = calculateSHA256(data);
-                    if (!calculatedHash.equalsIgnoreCase(piece.getHash())) {
+                    if (!calculatedHash.equalsIgnoreCase(piece.getSha256())) {
                         throw new IOException("Hash mismatch for piece " + piece.getId() +
-                                ". Expected: " + piece.getHash() + ", Got: " + calculatedHash);
+                                ". Expected: " + piece.getSha256() + ", Got: " + calculatedHash);
                     }
 
                     // 1. Write the downloaded piece to the file

@@ -1,3 +1,5 @@
+package com.fragmented.download.javafx.logic;
+
 import com.fragmented.download.core.client.DownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
 import com.fragmented.download.core.model.DownloadState;
@@ -106,6 +108,51 @@ public class Scheduler {
         double progress = (double) downloadState.getCompletedPieceCount() / downloadState.getTotalPieces();
         return progress;
         // return (double) downloadedBytes.get() / manifest.getFileSize();
+    }
+
+    /**
+     * Tuần 4: Download a specific piece on-demand (for VirtualFS)
+     * This is called when VirtualFS detects a piece is needed but not yet downloaded
+     * 
+     * @param pieceId The ID of the piece to download
+     */
+    public void downloadOnDemand(int pieceId) {
+        // Check if piece is already completed
+        synchronized (downloadState) {
+            if (downloadState.isPieceCompleted(pieceId)) {
+                return; // Already have it
+            }
+        }
+
+        // Get the piece metadata
+        if (pieceId < 0 || pieceId >= manifest.getPieces().size()) {
+            System.err.println("Invalid piece ID: " + pieceId);
+            return;
+        }
+
+        PieceModel piece = manifest.getPieces().get(pieceId);
+        
+        // Create a worker and download immediately (blocking for VirtualFS)
+        DownloadWorker worker = new DownloadWorker(downloadClient, errorCallback, pieceStorage, 
+                                                   stateStorage, localFilePath, fileId, 
+                                                   manifest.getPieceSize(), downloadState);
+        
+        // Submit and wait for completion (blocking call for on-demand access)
+        try {
+            java.util.concurrent.CompletableFuture<Void> future = new java.util.concurrent.CompletableFuture<>();
+            
+            worker.download(piece, (data) -> {
+                long totalDownloaded = downloadedBytes.addAndGet(data.length);
+                System.out.println("On-demand downloaded piece " + pieceId + ". Total: " + totalDownloaded);
+                future.complete(null);
+            });
+            
+            // Wait for download to complete (with timeout)
+            future.get(30, java.util.concurrent.TimeUnit.SECONDS);
+            
+        } catch (Exception e) {
+            System.err.println("Failed to download piece " + pieceId + " on-demand: " + e.getMessage());
+        }
     }
 
     public void shutdown() {
