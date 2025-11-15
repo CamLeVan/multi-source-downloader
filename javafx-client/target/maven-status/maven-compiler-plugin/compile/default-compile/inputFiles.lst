@@ -1,0 +1,11 @@
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\controller\DashboardController.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\controller\DownloadCellController.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\DownloadWorker.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\p2p\PeerServer.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\p2p\PieceHandler.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\Scheduler.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\storage\JsonStateStorage.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\storage\SparseFileStorage.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\logic\vfs\VirtualDownloaderFS.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\MainApp.java
+D:\VKU_learning\HK5\NetworkPrograming\BigProject\multi-source-downloader\javafx-client\src\main\java\com\fragmented\download\javafx\model\DownloadTask.java
