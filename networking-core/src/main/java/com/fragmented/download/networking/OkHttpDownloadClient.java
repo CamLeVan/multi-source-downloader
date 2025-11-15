@@ -12,10 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * An implementation of the DownloadClient interface that uses OkHttp for network requests.
- * It includes a robust retry mechanism with exponential backoff for each source.
- */
 public class OkHttpDownloadClient implements DownloadClient {
 
     private static final int MAX_RETRIES = 5;
@@ -38,17 +34,18 @@ public class OkHttpDownloadClient implements DownloadClient {
     @Override
     public CompletableFuture<byte[]> downloadPiece(PieceModel piece) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        // Start the process by trying the first source. The logic will fallback to the next source if needed.
+        // Bắt đầu thử từ nguồn đầu tiên (index 0)
         tryPieceFromSource(piece, 0, future);
         return future;
     }
 
     /**
-     * Attempts to download a piece from a specific source URL, identified by its index.
-     * If this source fails permanently, it will proceed to the next source.
+     * Logic "Fallback": Thử tải từ một nguồn trong danh sách.
+     * Nếu thất bại, nó sẽ gọi đệ quy chính nó với sourceIndex + 1.
      */
     private void tryPieceFromSource(PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
-        // If we've exhausted all available sources for this piece, the download fails.
+
+        // Nếu đã thử hết các nguồn (origin, mirror, peers)
         if (sourceIndex >= piece.getSources().size()) {
             future.completeExceptionally(new IOException("Failed to download piece " + piece.getId() + " from all available sources."));
             return;
@@ -58,76 +55,95 @@ public class OkHttpDownloadClient implements DownloadClient {
         long start = (long) piece.getId() * pieceSize;
         long end = start + pieceSize - 1;
 
+        // Tạo request HTTP Range chính xác
         Request request = new Request.Builder()
                 .url(sourceUrl)
                 .header("Range", "bytes=" + start + "-" + end)
                 .build();
 
-        // Execute the request for the current source, starting with retry count 0.
+        // Bắt đầu logic "Thử lại" (Retry) cho nguồn này
         executeWithRetry(request, 0, piece, sourceIndex, future);
     }
 
     /**
-     * Executes a request and handles the retry logic using a callback.
+     * Thực thi request với logic "Thử lại" (Retry).
      */
     private void executeWithRetry(Request request, int retryCount, PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                // A network-level error occurred, attempt a retry.
+                // Lỗi mạng (ví dụ: Timeout, Connection refused) -> Thử lại
                 handleFailure(call, e, retryCount, piece, sourceIndex, future);
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) {
-                // 5xx errors are server-side and might be transient, so we should retry.
-                if (response.code() >= 500) {
-                    handleFailure(call, new IOException("Server error: " + response.code()), retryCount, piece, sourceIndex, future);
-                    response.close();
-                    return;
-                }
 
-                // 2xx indicates success.
-                if (response.isSuccessful()) {
+                // *** BẮT ĐẦU SỬA LỖI ***
+                // (Đã cập nhật logic onResponse)
+
+                // 1. Thành công
+                if (response.isSuccessful()) { // Mã 2xx
                     try (ResponseBody body = response.body()) {
                         Objects.requireNonNull(body, "Response body is null");
                         future.complete(body.bytes());
                     } catch (IOException e) {
                         future.completeExceptionally(e);
                     }
+                    return; // Hoàn thành
+                }
+
+                // 2. Lỗi có thể "Thử lại" (Backoff)
+                // (Lỗi Server 5xx, Timeout 408, Quá tải 429)
+                if (response.code() >= 500 || response.code() == 408 || response.code() == 429) {
+                    handleFailure(call, new IOException("Retryable HTTP Error: " + response.code()), retryCount, piece, sourceIndex, future);
+                    response.close();
                     return;
                 }
 
-                // Any other error (like a 4xx client error) is considered a permanent failure for this source.
-                // We do not retry; we move directly to the next available source.
+                // 3. Lỗi nghiêm trọng, "Thất bại" (Fail fast)
+                // (Client gửi Range sai, không thể phục hồi)
+                if (response.code() == 416) {
+                    future.completeExceptionally(new IOException("Invalid Range requested (416). Failing piece " + piece.getId()));
+                    response.close();
+                    return;
+                }
+
+                // 4. Các lỗi 4xx khác -> "Bỏ qua" (Fallback)
+                // (Ví dụ: 404 Peer chưa có mảnh, 403 Cấm)
+                // Coi là nguồn này không hợp lệ -> Thử nguồn tiếp theo.
                 System.err.println("Unrecoverable error for " + request.url() + ": " + response.code() + ". Trying next source.");
                 response.close();
                 tryPieceFromSource(piece, sourceIndex + 1, future);
+                
+                // *** KẾT THÚC SỬA LỖI ***
             }
         });
     }
 
     /**
-     * Handles a failure by either scheduling a retry with exponential backoff or moving to the next source.
+     * Logic "Backoff": Xử lý khi thất bại, quyết định thử lại hoặc bỏ qua.
      */
     private void handleFailure(Call call, IOException e, int retryCount, PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
-        // Check if we still have retries left for the current source.
+
         if (retryCount < MAX_RETRIES) {
+            // Tính toán thời gian chờ (1s, 2s, 4s, 8s, 16s)
             long delayMs = (long) (Math.pow(2, retryCount) * INITIAL_BACKOFF_MS);
             System.err.println("Retrying piece " + piece.getId() + " from " + call.request().url() + " in " + delayMs + " ms. Attempt " + (retryCount + 1) + "/" + MAX_RETRIES + ". Error: " + e.getMessage());
 
+            // Lên lịch thử lại
             scheduler.schedule(() -> {
                 executeWithRetry(call.request(), retryCount + 1, piece, sourceIndex, future);
             }, delayMs, TimeUnit.MILLISECONDS);
         } else {
-            // No retries left for this source, so we move to the next one.
+            // Hết số lần thử lại cho nguồn này -> Thử nguồn tiếp theo (Fallback)
             System.err.println("Max retries reached for " + call.request().url() + ". Trying next source.");
             tryPieceFromSource(piece, sourceIndex + 1, future);
         }
     }
 
     /**
-     * Shuts down the internal executor service. This should be called when the client is no longer needed.
+     * Tắt bộ lập lịch (scheduler) khi không cần dùng nữa.
      */
     public void shutdown() {
         this.scheduler.shutdownNow();

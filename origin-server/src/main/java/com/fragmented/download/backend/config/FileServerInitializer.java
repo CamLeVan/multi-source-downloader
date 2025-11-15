@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.security.NoSuchAlgorithmException;
 
 @Component
 public class FileServerInitializer implements CommandLineRunner {
@@ -45,7 +46,16 @@ public class FileServerInitializer implements CommandLineRunner {
             }
         }
 
-        // Generate the manifest file for the test file
-        ManifestGeneratorUtil.generateManifest(file);
+        try {
+    // Generate the manifest file for the test file
+            ManifestGeneratorUtil.generateManifest(file);
+            } catch (NoSuchAlgorithmException e) {
+                System.err.println("FATAL: SHA-256 Algorithm not found. Server cannot start.");
+                // Thoát ứng dụng Spring Boot
+                System.exit(1); 
+            } catch (IOException e) {
+                System.err.println("FATAL: Failed to generate manifest. Server cannot start.");
+                System.exit(1);
+            }
     }
 }

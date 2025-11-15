@@ -29,6 +29,10 @@ public class ManifestController {
 
     private final Gson gson = new Gson();
 
+    /**
+     * Phục vụ file Manifest (JSON) cho client.
+     * Task Tuần 1.
+     */
     @GetMapping("/manifest/{fileName}")
     public ManifestModel getManifest(@PathVariable String fileName) throws FileNotFoundException {
         String manifestFileName = fileName + ".manifest.json";
@@ -45,6 +49,10 @@ public class ManifestController {
         }
     }
 
+    /**
+     * Phục vụ các mảnh file (pieces) qua HTTP Range (Streaming I/O).
+     * Task Tuần 3.
+     */
     @GetMapping("/files/{fileName}")
     public ResponseEntity<InputStreamResource> getFilePiece(
             @PathVariable String fileName,
@@ -55,8 +63,12 @@ public class ManifestController {
         File file = filePath.toFile();
         long fileLength = file.length();
 
+        if (!file.exists()) {
+             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
+        }
+
         if (rangeHeader == null) {
-            // Return the full file if no range is requested
+            // Trả về toàn bộ file nếu không yêu cầu Range
             InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
@@ -68,10 +80,26 @@ public class ManifestController {
         // Parse the range header
         String[] ranges = rangeHeader.substring("bytes=".length()).split("-");
         long start = Long.parseLong(ranges[0]);
-        long end = ranges.length > 1 ? Long.parseLong(ranges[1]) : fileLength - 1;
+        long end;
+        if (ranges.length > 1 && !ranges[1].trim().isEmpty()) {
+            end = Long.parseLong(ranges[1]);
+        } else {
+            end = fileLength - 1;
+        }
+
+
+        // *** ĐÃ SỬA LỖI ***
+        // Thêm khối xác thực (validation) từ DownloadController (đã xóa)
+        if (start < 0 || start >= fileLength || end < start || end >= fileLength) {
+            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + fileLength)
+                    .build();
+        }
+        // *** KẾT THÚC SỬA LỖI ***
 
         long contentLength = (end - start) + 1;
 
+        // Sử dụng Streaming I/O hiệu suất cao
         InputStream inputStream = Files.newInputStream(filePath);
         inputStream.skip(start);
 
@@ -84,7 +112,10 @@ public class ManifestController {
                 .body(resource);
     }
 
-    // Helper class to limit the input stream to the requested range
+    /**
+     * Lớp helper để giới hạn InputStream chỉ đọc đúng số byte yêu cầu.
+     * Giống hệt BoundedInputStream trong ManifestGeneratorUtil.
+     */
     private static class LimitedInputStream extends InputStream {
         private final InputStream original;
         private long remaining;
@@ -117,7 +148,8 @@ public class ManifestController {
         }
 
         @Override
-        public void close() throws IOException {    
+        public void close() throws IOException {
+            // Quan trọng: Đóng luồng gốc sau khi đọc xong
             original.close();
         }
     }

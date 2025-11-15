@@ -13,7 +13,7 @@ public class ManifestModel {
         this.pieces = pieces;
     }
 
-    // Getters and Setters
+    
     public long getFileSize() {
         return fileSize;
     }
@@ -28,6 +28,10 @@ public class ManifestModel {
 
     public void setPieceSize(long pieceSize) {
         this.pieceSize = pieceSize;
+    }
+
+    public long getTotalPieces() {
+        return (fileSize + pieceSize - 1) / pieceSize;
     }
 
     public List<PieceModel> getPieces() {

@@ -4,6 +4,7 @@ public class AnnounceRequest {
     private String fileId;
     private String peerId;
     private int port;
+    // private int pieceId; // *** ĐÃ XÓA (Để khớp với logic Dumb Tracker) ***
 
     // Default constructor for JSON deserialization
     public AnnounceRequest() {
@@ -33,4 +34,6 @@ public class AnnounceRequest {
     public void setPort(int port) {
         this.port = port;
     }
+
+    // *** ĐÃ XÓA Getters/Setters cho pieceId ***
 }

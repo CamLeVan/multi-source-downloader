@@ -42,15 +42,14 @@ public class ManifestGeneratorUtil {
             byte[] buffer = new byte[8192];
             for (int i = 0; i < numberOfPieces; i++) {
                 sha256.reset();
+                long pieceBytesRead = 0;
                 
                 // Create a bounded input stream to read only one piece
                 InputStream boundedIs = new BoundedInputStream(is, PIECE_SIZE);
-                
-                // Fix: Use try-with-resources to auto-close DigestInputStream
-                try (DigestInputStream dis = new DigestInputStream(boundedIs, sha256)) {
-                    while (dis.read(buffer) != -1) {
-                        // Reading the stream updates the digest
-                    }
+                DigestInputStream dis = new DigestInputStream(boundedIs, sha256);
+
+                while (dis.read(buffer) != -1) {
+                    // Reading the stream updates the digest
                 }
 
                 byte[] hash = sha256.digest();
