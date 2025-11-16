@@ -1,7 +1,7 @@
-com\fragmented\download\core\client\ErrorCallback.class
-com\fragmented\download\core\storage\IStateStorage.class
-com\fragmented\download\core\client\DownloadClient.class
-com\fragmented\download\core\model\ManifestModel.class
-com\fragmented\download\core\model\DownloadState.class
-com\fragmented\download\core\model\PieceModel.class
-com\fragmented\download\core\storage\PieceStorage.class
+com/fragmented/download/core/storage/PieceStorage.class
+com/fragmented/download/core/storage/IStateStorage.class
+com/fragmented/download/core/model/DownloadState.class
+com/fragmented/download/core/client/ErrorCallback.class
+com/fragmented/download/core/model/ManifestModel.class
+com/fragmented/download/core/client/DownloadClient.class
+com/fragmented/download/core/model/PieceModel.class

@@ -1,4 +1,4 @@
-D:\VKU_learning\HK5\NetworkPrograming\BigProject\Huy\multi-source-downloader\origin-server\src\main\java\com\fragmented\download\backend\config\FileServerInitializer.java
-D:\VKU_learning\HK5\NetworkPrograming\BigProject\Huy\multi-source-downloader\origin-server\src\main\java\com\fragmented\download\backend\controller\ManifestController.java
-D:\VKU_learning\HK5\NetworkPrograming\BigProject\Huy\multi-source-downloader\origin-server\src\main\java\com\fragmented\download\backend\util\ManifestGeneratorUtil.java
-D:\VKU_learning\HK5\NetworkPrograming\BigProject\Huy\multi-source-downloader\origin-server\src\main\java\com\fragmented\download\OriginServerApplication.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/origin-server/src/main/java/com/fragmented/download/OriginServerApplication.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/origin-server/src/main/java/com/fragmented/download/backend/config/FileServerInitializer.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/origin-server/src/main/java/com/fragmented/download/backend/controller/ManifestController.java
+/Users/ttcenter/IdeaProjects/multi-source-downloader/origin-server/src/main/java/com/fragmented/download/backend/util/ManifestGeneratorUtil.java

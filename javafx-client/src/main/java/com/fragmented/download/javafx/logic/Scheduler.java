@@ -19,21 +19,31 @@ import java.util.stream.Collectors;
 /**
  * Manages the queue of pieces to be downloaded, orchestrates the download process,
  * and resumes downloads from a previously saved state.
+ * Tuần 6: Added state management (IDLE, RUNNING, PAUSED, FINISHED) for pause/resume support
  */
 public class Scheduler {
+
+    // Tuần 6: State management
+    private enum SchedulerState {
+        IDLE,
+        RUNNING,
+        PAUSED,
+        FINISHED
+    }
 
     private final Queue<PieceModel> pieceQueue;
     private final ManifestModel manifest;
     private final DownloadClient downloadClient;
     private final ErrorCallback errorCallback;
     private final int numberOfWorkers;
-    private final ExecutorService workerExecutor;
+    private ExecutorService workerExecutor; // Tuần 6: Made non-final to support pause/resume
     private final PieceStorage pieceStorage;
     private final IStateStorage stateStorage;
     private final String localFilePath;
     private final String fileId;
     private final DownloadState downloadState;
 
+    private volatile SchedulerState state = SchedulerState.IDLE; // Tuần 6: State tracking
     private final AtomicLong downloadedBytes = new AtomicLong(0);
 
     public Scheduler(ManifestModel manifest, DownloadClient downloadClient, ErrorCallback errorCallback, int numberOfWorkers,
@@ -66,38 +76,89 @@ public class Scheduler {
                 .filter(p -> !this.downloadState.isPieceCompleted(p.getId()))
                 .collect(Collectors.toCollection(ConcurrentLinkedQueue::new));
 
-        this.workerExecutor = Executors.newFixedThreadPool(numberOfWorkers);
+        // Tuần 6: Don't initialize workerExecutor in constructor (will be created in start())
+        this.workerExecutor = null;
     }
 
-    public void start() {
+    private void run() {
         System.out.println("Scheduler started for file of size: " + manifest.getFileSize());
         System.out.println("Total pieces to download: " + pieceQueue.size() + " (already completed: " + downloadState.getCompletedPieceCount() + ")");
 
         if (pieceQueue.isEmpty()) {
             System.out.println("Download is already complete.");
-            // Optionally, trigger a UI update to show completion
+            state = SchedulerState.FINISHED;
             return;
         }
 
+        this.workerExecutor = Executors.newFixedThreadPool(numberOfWorkers);
+        this.state = SchedulerState.RUNNING;
+        submitWorkers();
+    }
+
+    public void start() {
+        if (state == SchedulerState.IDLE) {
+            run();
+        } else {
+            System.out.println("Scheduler can only be started once. Use resume() to continue a paused download.");
+        }
+    }
+
+    private void submitWorkers() {
         for (int i = 0; i < numberOfWorkers; i++) {
             DownloadWorker worker = new DownloadWorker(downloadClient, errorCallback, pieceStorage, stateStorage,
                     localFilePath, fileId, manifest.getPieceSize(), downloadState);
 
             workerExecutor.submit(() -> {
-                while (!pieceQueue.isEmpty()) {
+                while (state == SchedulerState.RUNNING && !pieceQueue.isEmpty()) {
                     PieceModel piece = pieceQueue.poll();
                     if (piece != null) {
                         System.out.println("Worker " + Thread.currentThread().getName() + " is downloading piece " + piece.getId());
                         worker.download(piece, (data) -> {
                             long totalDownloaded = downloadedBytes.addAndGet(data.length);
                             System.out.println("Downloaded piece " + piece.getId() + ". Total downloaded: " + totalDownloaded);
-                            // UI progress updates are handled by the controller observing the scheduler's progress.
                         });
                     }
                 }
-                System.out.println("Worker " + Thread.currentThread().getName() + " finished.");
+                // Check if the download finished naturally
+                if (pieceQueue.isEmpty()) {
+                    state = SchedulerState.FINISHED;
+                    System.out.println("All pieces downloaded. Download finished.");
+                }
             });
         }
+    }
+
+    /**
+     * Tuần 6: Pause the download. Workers will stop after finishing current piece.
+     */
+    public void pause() {
+        if (state == SchedulerState.RUNNING) {
+            System.out.println("Pausing scheduler...");
+            state = SchedulerState.PAUSED;
+            // This will stop workers from picking up new tasks because the loop condition will fail.
+            // It allows currently downloading pieces to finish.
+            workerExecutor.shutdown(); // Does not accept new tasks.
+            System.out.println("Scheduler paused. Workers will stop after finishing current piece.");
+        }
+    }
+
+    /**
+     * Tuần 6: Resume the download. Re-creates executor and continues downloading.
+     */
+    public void resume() {
+        if (state == SchedulerState.PAUSED) {
+            System.out.println("Resuming scheduler...");
+            // Re-initialize the executor and submit workers to process the remaining queue
+            run();
+        }
+    }
+
+    /**
+     * Tuần 6: Get the unique identifier for the file being downloaded.
+     * @return The file ID
+     */
+    public String getFileId() {
+        return fileId;
     }
 
     public double getProgress() {

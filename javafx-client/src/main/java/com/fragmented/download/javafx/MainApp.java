@@ -6,6 +6,7 @@ import com.fragmented.download.javafx.logic.p2p.PeerServer;
 import com.fragmented.download.javafx.logic.storage.JsonStateStorage;
 import com.fragmented.download.javafx.logic.storage.SparseFileStorage;
 import com.fragmented.download.javafx.logic.vfs.VirtualDownloaderFS;
+import com.fragmented.download.javafx.model.DownloadTask;
 import com.fragmented.download.networking.OkHttpDownloadClient;
 import com.fragmented.download.core.client.ErrorCallback;
 import com.fragmented.download.core.model.ManifestModel;
@@ -13,6 +14,8 @@ import com.fragmented.download.javafx.controller.DashboardController;
 import com.fragmented.download.javafx.logic.Scheduler;
 import com.google.gson.Gson;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -30,109 +33,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Tuần 6: MainApp với multi-download support
+ */
 public class MainApp extends Application {
 
     private static final String MANIFEST_URL = "http://localhost:8080/manifest/100MB.zip";
     private static final String VFS_MOUNT_DIR = "downloader-vfs";
 
-    private Scheduler scheduler;
-    private OkHttpDownloadClient downloadClient;
-    private PeerServer peerServer;
-    private DashboardController dashboardController; // Tuần 3: Reference để trigger shake animation
-    private VirtualDownloaderFS vfs; // Tuần 4: Reference to the mounted filesystem for unmounting
     private final OkHttpClient httpClient = new OkHttpClient();
+    private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList(); // Tuần 6: Multi-download
+    private PeerServer peerServer;
+    private VirtualDownloaderFS vfs;
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        // 1. Fetch the manifest from the server
-        ManifestModel manifest = fetchManifest();
-
-        // 2. Define file identifiers and paths
-        // In a real app, this would come from user input or another source
-        String fileId = MANIFEST_URL.substring(MANIFEST_URL.lastIndexOf('/') + 1);
-        String localFilePath = Paths.get(System.getProperty("user.home"), "Downloads", fileId).toString();
-
-        // 3. Set up storage components
-        IStateStorage stateStorage = new JsonStateStorage();
-        PieceStorage pieceStorage = new SparseFileStorage();
-
-        // Ensure the target file is created (as a sparse file)
-        pieceStorage.createSparseFile(localFilePath, manifest.getFileSize());
-
-        // 4. Set up backend components
-        downloadClient = new OkHttpDownloadClient(httpClient, 4, manifest.getPieceSize());
-        
-        // Enhanced ErrorCallback - Tuần 2 & 3: Handle timeout, network errors, và SHA-256 mismatch
-        ErrorCallback errorCallback = (piece, cause) -> {
-            // Phân loại lỗi
-            if (cause instanceof java.util.concurrent.TimeoutException) {
-                System.err.println("TIMEOUT: Piece " + piece.getId() + " from source. Switching to alternative source...");
-            } else if (cause instanceof java.io.IOException) {
-                String message = cause.getMessage();
-                if (message != null && message.contains("Hash mismatch")) {
-                    // Tuần 3: SHA-256 verification failed
-                    System.err.println("SHA-256 MISMATCH: Piece " + piece.getId() + " - " + message);
-                } else {
-                    System.err.println("NETWORK ERROR: Piece " + piece.getId() + " - " + message);
-                }
-            } else {
-                System.err.println("FATAL: Download failed for piece " + piece.getId());
-                cause.printStackTrace();
-            }
-            
-            // Tuần 3: Trigger shake animation khi có lỗi
-            if (dashboardController != null) {
-                dashboardController.triggerShakeAnimation();
-            }
-            
-            // Note: Scheduler sẽ tự động retry piece này qua source khác
-            // do OkHttpDownloadClient đã có multi-source fallback logic
-        };
-
-        // 5. Create the scheduler, now with storage logic
-        scheduler = new Scheduler(manifest, downloadClient, errorCallback, 4, pieceStorage, stateStorage, localFilePath, fileId);
-
-        // 6. Create and start the PeerServer to serve downloaded pieces to others
-        try {
-            peerServer = new PeerServer(stateStorage, pieceStorage, manifest, fileId, localFilePath);
-            peerServer.start();
-        } catch (IOException e) {
-            System.err.println("Failed to start PeerServer. P2P sharing will be disabled.");
-            e.printStackTrace();
-            // Optionally, show an alert to the user
-        }
-        
-        // 7. Mount the Virtual Filesystem in a background thread to avoid UI freeze
-        // Tuần 4: VirtualFS implementation with on-demand download
-        VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(
-            manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
-        );
-        
-        new Thread(() -> {
-            try {
-                Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
-                if (!Files.exists(mountPoint)) {
-                    Files.createDirectories(mountPoint);
-                }
-                System.out.println("Attempting to mount VFS at: " + mountPoint);
-
-                String os = System.getProperty("os.name").toLowerCase();
-                if (os.contains("win")) {
-                    System.err.println("WARNING: VirtualFS not supported on Windows (jnr-dokan unavailable).");
-                    System.err.println("Application will continue without VirtualFS.");
-                } else {
-                    // macOS/Linux using FUSE
-                    System.out.println("Running on macOS/Linux, using FUSE to mount.");
-                    this.vfs = virtualDownloaderFS;
-                    this.vfs.mount(mountPoint, true, false); // Blocking call
-                }
-            } catch (Exception e) {
-                System.err.println("ERROR: Failed to mount virtual filesystem. The application will continue without it.");
-                e.printStackTrace();
-            }
-        }, "vfs-mount-thread").start();
-        
-        // 8. Set up the UI
+        // Tuần 6: Set up the UI first
         URL fxmlLocation = getClass().getResource("/fxml/Dashboard.fxml");
         if (fxmlLocation == null) {
             throw new IOException("Cannot find FXML file. Make sure it's in the resources/fxml directory.");
@@ -140,29 +56,108 @@ public class MainApp extends Application {
 
         FXMLLoader loader = new FXMLLoader(fxmlLocation);
         Parent root = loader.load();
-        // 9. Pass the scheduler to the controller
-        dashboardController = loader.getController(); // Tuần 3: Store reference
-        dashboardController.setScheduler(scheduler);
-
-        // Tuần 2: Apply CSS Gradient styling
-        Scene scene = new Scene(root, 800, 600);
-        URL cssLocation = getClass().getResource("/styles/dashboard.css");
-        if (cssLocation != null) {
-            scene.getStylesheets().add(cssLocation.toExternalForm());
-        } else {
-            System.err.println("WARNING: CSS file not found. UI will use default styling.");
-        }
+        
+        DashboardController controller = loader.getController();
+        controller.setMainApp(this);
+        controller.setDownloadTasks(downloadTasks);
 
         primaryStage.setTitle("Multi-Source Downloader");
-        primaryStage.setScene(scene);
+        primaryStage.setScene(new Scene(root, 800, 600));
         primaryStage.show();
 
-        // 10. Start the download
-        scheduler.start();
+        // Start the initial download
+        startDownload(MANIFEST_URL);
     }
 
-    private ManifestModel fetchManifest() throws IOException {
-        Request request = new Request.Builder().url(MANIFEST_URL).build();
+    /**
+     * Tuần 6: Start a new download and add it to the queue
+     * Can be called multiple times for multi-download support
+     */
+    public void startDownload(String manifestUrl) {
+        try {
+            // 1. Fetch the manifest from the server
+            ManifestModel manifest = fetchManifest(manifestUrl);
+
+            // 2. Define file identifiers and paths
+            String fileId = manifestUrl.substring(manifestUrl.lastIndexOf('/') + 1);
+            String localFilePath = Paths.get(System.getProperty("user.home"), "Downloads", fileId).toString();
+
+            // 3. Set up storage components
+            IStateStorage stateStorage = new JsonStateStorage();
+            PieceStorage pieceStorage = new SparseFileStorage();
+
+            // Ensure the target file is created (as a sparse file)
+            pieceStorage.createSparseFile(localFilePath, manifest.getFileSize());
+
+            // 4. Set up backend components
+            OkHttpDownloadClient downloadClient = new OkHttpDownloadClient(httpClient, 4, manifest.getPieceSize());
+            ErrorCallback errorCallback = (piece, cause) -> {
+                System.err.println("FATAL: Download failed for piece " + piece.getId());
+                cause.printStackTrace();
+            };
+
+            // 5. Create the scheduler
+            Scheduler scheduler = new Scheduler(manifest, downloadClient, errorCallback, 4, pieceStorage, stateStorage, localFilePath, fileId);
+            
+            // 6. Create and start the PeerServer (only once)
+            if (peerServer == null) {
+                try {
+                    peerServer = new PeerServer(stateStorage, pieceStorage, manifest, fileId, localFilePath);
+                    peerServer.start();
+                } catch (IOException e) {
+                    System.err.println("Failed to start PeerServer. P2P sharing will be disabled.");
+                    e.printStackTrace();
+                }
+            }
+
+            // 7. Mount the Virtual Filesystem (only once)
+            mountVFS(fileId, manifest, scheduler, pieceStorage, stateStorage, localFilePath);
+
+            // 8. Create and add the download task to the list
+            DownloadTask task = new DownloadTask(fileId, scheduler);
+            downloadTasks.add(task);
+
+            // 9. Start the download
+            scheduler.start();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void mountVFS(String fileId, ManifestModel manifest, Scheduler scheduler, PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {
+        if (vfs == null) {
+            new Thread(() -> {
+                try {
+                    VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(
+                        manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
+                    );
+                    
+                    Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
+                    if (!Files.exists(mountPoint)) {
+                        Files.createDirectories(mountPoint);
+                    }
+                    System.out.println("Attempting to mount VFS at: " + mountPoint);
+
+                    String os = System.getProperty("os.name").toLowerCase();
+                    if (os.contains("win")) {
+                        System.err.println("WARNING: VirtualFS not supported on Windows.");
+                        System.err.println("Application will continue without VirtualFS.");
+                    } else {
+                        System.out.println("Running on macOS/Linux, using FUSE to mount.");
+                        this.vfs = virtualDownloaderFS;
+                        this.vfs.mount(mountPoint, true, false);
+                    }
+                } catch (Exception e) {
+                    System.err.println("FATAL: Failed to mount virtual filesystem. The application will continue without it.");
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+    }
+
+    private ManifestModel fetchManifest(String manifestUrl) throws IOException {
+        Request request = new Request.Builder().url(manifestUrl).build();
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 throw new IOException("Failed to download manifest: " + response);
@@ -179,28 +174,22 @@ public class MainApp extends Application {
 
     @Override
     public void stop() {
-        // Clean up resources in reverse order of creation
-        System.out.println("Shutting down application...");
-        
-        // Tuần 4: Unmount VirtualFS before closing other resources
         System.out.println("Unmounting virtual filesystem...");
         try {
             if (vfs != null) {
                 vfs.umount();
             }
-        } catch (Throwable e) { // Catch Throwable to handle native errors as well
+        } catch (Throwable e) {
             System.err.println("Error while unmounting VFS: " + e.getMessage());
         }
-        
+        System.out.println("Shutting down application...");
         if (peerServer != null) {
             peerServer.close();
         }
-        if (scheduler != null) {
-            scheduler.shutdown();
-        }
-        if (downloadClient != null) {
-            downloadClient.shutdown();
-        }
+
+        // Tuần 6: Pause all downloads before shutdown
+        downloadTasks.forEach(task -> task.getScheduler().pause());
+        
         System.out.println("Shutdown complete.");
     }
 

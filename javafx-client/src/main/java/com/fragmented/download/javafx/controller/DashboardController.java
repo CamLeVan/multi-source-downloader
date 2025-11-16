@@ -1,75 +1,126 @@
 package com.fragmented.download.javafx.controller;
 
-import com.fragmented.download.javafx.logic.Scheduler;
+import com.fragmented.download.javafx.MainApp;
+import com.fragmented.download.javafx.model.DownloadTask;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.animation.TranslateTransition;
-import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.ProgressBar;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.util.Duration;
 
+/**
+ * Tuần 6: DashboardController với ListView support
+ * Hỗ trợ nhiều downloads, drag & drop để reorder
+ */
 public class DashboardController {
 
     @FXML
-    private ProgressBar overallProgressBar;
-    
-    // Tuần 2: Per-source progress bars
-    @FXML
-    private ProgressBar originProgressBar;
-    
-    @FXML
-    private ProgressBar mirrorProgressBar;
-    
-    @FXML
-    private ProgressBar peerProgressBar;
+    private ListView<DownloadTask> downloadListView;
 
-    private Scheduler scheduler;
+    @FXML
+    private Label dropLabel;
+
+    private ObservableList<DownloadTask> downloadTasks;
+    private MainApp mainApp;
 
     public void initialize() {
-        // Tuần 2: Timeline animate - Update every 100ms for smooth animation
+        // Tuần 6: Set up a timeline to update the progress bars periodically.
         Timeline timeline = new Timeline(
-                new KeyFrame(Duration.millis(100), event -> updateProgress())
+                new KeyFrame(Duration.seconds(0), event -> updateProgress()),
+                new KeyFrame(Duration.seconds(1))
         );
         timeline.setCycleCount(Animation.INDEFINITE);
         timeline.play();
+
+        setupLinkDrop();
     }
 
-    public void setScheduler(Scheduler scheduler) {
-        this.scheduler = scheduler;
+    public void setMainApp(MainApp mainApp) {
+        this.mainApp = mainApp;
     }
 
+    public void setDownloadTasks(ObservableList<DownloadTask> downloadTasks) {
+        this.downloadTasks = downloadTasks;
+        downloadListView.setItems(downloadTasks);
+        downloadListView.setCellFactory(param -> new DownloadCellController());
+        setupDragAndDrop();
+    }
+
+    /**
+     * Tuần 6: Update progress cho tất cả downloads
+     */
     private void updateProgress() {
-        if (scheduler != null) {
-            double progress = scheduler.getProgress();
-            
-            // Ensure UI updates are done on the JavaFX Application Thread
-            Platform.runLater(() -> {
-                overallProgressBar.setProgress(progress);
-                
-                // Tuần 2: Update per-source progress
-                // TODO: Scheduler cần expose getOriginProgress(), getMirrorProgress(), getPeerProgress()
-                // Tạm thời set về progress tổng (sẽ refactor sau khi Scheduler có per-source tracking)
-                originProgressBar.setProgress(progress * 0.4);  // Giả sử Origin handle 40%
-                mirrorProgressBar.setProgress(progress * 0.3); // Mirror handle 30%
-                peerProgressBar.setProgress(progress * 0.3);   // Peer handle 30%
-            });
+        if (downloadTasks != null) {
+            downloadTasks.forEach(DownloadTask::updateProgress);
         }
     }
 
     /**
-     * Tuần 3: Shake animation khi có lỗi (ErrorCallback hoặc SHA-256 verification fail)
-     * Rung lắc overall progress bar để alert user
+     * Tuần 6: Drag & Drop reordering trong ListView
      */
-    public void triggerShakeAnimation() {
-        Platform.runLater(() -> {
-            TranslateTransition shake = new TranslateTransition(Duration.millis(100), overallProgressBar);
-            shake.setFromX(0);
-            shake.setToX(10);
-            shake.setCycleCount(6);
-            shake.setAutoReverse(true);
-            shake.play();
+    private void setupDragAndDrop() {
+        downloadListView.setOnDragDetected(event -> {
+            if (downloadListView.getSelectionModel().getSelectedItem() == null) {
+                return;
+            }
+            Dragboard dragboard = downloadListView.startDragAndDrop(TransferMode.MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(String.valueOf(downloadListView.getSelectionModel().getSelectedIndex()));
+            dragboard.setContent(content);
+            event.consume();
+        });
+
+        downloadListView.setOnDragOver(event -> {
+            if (event.getGestureSource() != downloadListView || !event.getDragboard().hasString()) {
+                return;
+            }
+            event.acceptTransferModes(TransferMode.MOVE);
+            event.consume();
+        });
+
+        downloadListView.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasString()) {
+                int draggedIndex = Integer.parseInt(db.getString());
+                int dropIndex = downloadListView.getSelectionModel().getSelectedIndex();
+
+                DownloadTask draggedTask = downloadTasks.remove(draggedIndex);
+                downloadTasks.add(dropIndex, draggedTask);
+
+                success = true;
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
+    }
+
+    /**
+     * Tuần 6 (Optional): Setup drop zone cho link từ browser/WebView
+     */
+    private void setupLinkDrop() {
+        dropLabel.setOnDragOver(event -> {
+            if (event.getGestureSource() != dropLabel && event.getDragboard().hasUrl()) {
+                event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+            }
+            event.consume();
+        });
+
+        dropLabel.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasUrl()) {
+                mainApp.startDownload(db.getUrl());
+                success = true;
+            }
+            event.setDropCompleted(success);
+            event.consume();
         });
     }
 }

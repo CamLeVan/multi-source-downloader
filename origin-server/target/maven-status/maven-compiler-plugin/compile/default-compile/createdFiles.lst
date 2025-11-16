@@ -1,6 +1,6 @@
-com\fragmented\download\backend\config\FileServerInitializer.class
-com\fragmented\download\backend\util\ManifestGeneratorUtil$BoundedInputStream.class
-com\fragmented\download\backend\controller\ManifestController$LimitedInputStream.class
-com\fragmented\download\backend\util\ManifestGeneratorUtil.class
-com\fragmented\download\OriginServerApplication.class
-com\fragmented\download\backend\controller\ManifestController.class
+com/fragmented/download/backend/controller/ManifestController.class
+com/fragmented/download/OriginServerApplication.class
+com/fragmented/download/backend/controller/ManifestController$LimitedInputStream.class
+com/fragmented/download/backend/config/FileServerInitializer.class
+com/fragmented/download/backend/util/ManifestGeneratorUtil.class
+com/fragmented/download/backend/util/ManifestGeneratorUtil$BoundedInputStream.class
