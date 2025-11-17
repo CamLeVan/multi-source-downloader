@@ -1,7 +1,0 @@
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/client/DownloadClient.java
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/client/ErrorCallback.java
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/model/DownloadState.java
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/model/ManifestModel.java
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/model/PieceModel.java
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/storage/IStateStorage.java
-/Users/ttcenter/IdeaProjects/multi-source-downloader/shared-model/src/main/java/com/fragmented/download/core/storage/PieceStorage.java
