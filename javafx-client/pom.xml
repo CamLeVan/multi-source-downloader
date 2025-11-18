@@ -13,6 +13,11 @@
     <artifactId>javafx-client</artifactId>
     <packaging>jar</packaging>
 
+    <properties>
+        <!-- dùng JavaFX 21 cho JDK 21 -->
+        <javafx.version>21.0.3</javafx.version>
+    </properties>
+
     <dependencies>
         <!-- Internal dependency -->
         <dependency>
@@ -25,18 +30,6 @@
             <groupId>com.fragmented.download</groupId>
             <artifactId>networking-core</artifactId>
             <version>${project.version}</version>
-        </dependency>
-
-        <!-- JavaFX dependencies -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>17.0.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>17.0.6</version>
         </dependency>
 
         <!-- JSON parsing -->
@@ -58,15 +51,12 @@
             <version>2.0.9</version>
         </dependency>
 
-        <!-- Filesystem in Userspace (FUSE) for virtual file mounting -->
-        <!-- Tuần 4: VirtualFS implementation - macOS/Linux only (Windows requires Dokan which is not available) -->
+        <!-- FUSE (macOS/Linux only) -->
         <dependency>
             <groupId>com.github.serceman</groupId>
             <artifactId>jnr-fuse</artifactId>
             <version>0.5.8</version>
         </dependency>
-        <!-- Note: jnr-dokan không tồn tại, Windows sẽ không support VirtualFS -->
-
     </dependencies>
 
     <build>
@@ -81,5 +71,64 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- Profiles cho OS -->
+    <profiles>
+        <!-- macOS -->
+        <profile>
+            <id>mac</id>
+            <activation>
+                <os><family>mac</family></os>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-controls</artifactId>
+                    <version>${javafx.version}</version>
+                    <classifier>mac</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-fxml</artifactId>
+                    <version>${javafx.version}</version>
+                    <classifier>mac</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-graphics</artifactId>
+                    <version>${javafx.version}</version>
+                    <classifier>mac</classifier>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <!-- Windows -->
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os><family>Windows</family></os>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-controls</artifactId>
+                    <version>${javafx.version}</version>
+                    <classifier>win</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-fxml</artifactId>
+                    <version>${javafx.version}</version>
+                    <classifier>win</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-graphics</artifactId>
+                    <version>${javafx.version}</version>
+                    <classifier>win</classifier>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
 </project>

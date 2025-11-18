@@ -94,11 +94,22 @@ public class MainApp extends Application {
         controller.setDownloadTasks(downloadTasks);
 
         primaryStage.setTitle("Multi-Source Downloader - " + CLIENT_NAME + " (" + localIP + ")");
-        primaryStage.setScene(new Scene(root, 800, 600));
+        primaryStage.setScene(new Scene(root, 900, 700));
         primaryStage.show();
 
-        // Start the initial download
-        startDownload(MANIFEST_URL);
+        // Auto-download DISABLED - User will select files from UI
+        // User can now choose files from dropdown or enter custom file name
+        // To enable auto-download for testing, uncomment below:
+        /*
+        new Thread(() -> {
+            try {
+                Thread.sleep(500);
+                startDownload(MANIFEST_URL);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        */
     }
 
     /**
@@ -386,6 +397,13 @@ public class MainApp extends Application {
         downloadTasks.forEach(task -> task.getScheduler().pause());
         
         System.out.println("Shutdown complete.");
+    }
+
+    /**
+     * Getter cho Origin Server URL - DashboardController cần để build manifest URL
+     */
+    public String getOriginServerUrl() {
+        return ORIGIN_SERVER_URL;
     }
 
     public static void main(String[] args) {

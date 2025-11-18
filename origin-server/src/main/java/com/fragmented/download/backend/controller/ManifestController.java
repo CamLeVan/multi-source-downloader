@@ -30,6 +30,41 @@ public class ManifestController {
     private final Gson gson = new Gson();
 
     /**
+     * API để list tất cả files có sẵn trên server.
+     * Client dùng để hiển thị danh sách files có thể download.
+     */
+    @GetMapping("/files/list")
+    public ResponseEntity<java.util.List<String>> listAvailableFiles(jakarta.servlet.http.HttpServletRequest request) {
+        String clientIP = request.getRemoteAddr();
+        System.out.println(String.format("[%s] [ORIGIN] GET /files/list | FROM: %s → TO: Origin", 
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+            clientIP));
+        
+        try {
+            Path serverDir = Paths.get(FileServerInitializer.SERVER_FILE_DIR);
+            java.util.List<String> fileNames = new java.util.ArrayList<>();
+            
+            // Scan thư mục và lấy tất cả files (trừ .manifest.json)
+            try (java.util.stream.Stream<Path> paths = Files.walk(serverDir, 1)) {
+                paths.filter(Files::isRegularFile)
+                     .filter(p -> !p.getFileName().toString().endsWith(".manifest.json"))
+                     .forEach(p -> fileNames.add(p.getFileName().toString()));
+            }
+            
+            System.out.println(String.format("[%s] [ORIGIN] ✓ File list sent | FROM: Origin → TO: %s | Count: %d", 
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                clientIP, fileNames.size()));
+            
+            return ResponseEntity.ok(fileNames);
+        } catch (IOException e) {
+            System.err.println(String.format("[%s] [ORIGIN] ✗ Error listing files | FROM: %s | Error: %s", 
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                clientIP, e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Phục vụ file Manifest (JSON) cho client.
      * Task Tuần 1.
      */
