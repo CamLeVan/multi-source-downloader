@@ -405,8 +405,34 @@ public class DashboardController {
         String manifestUrl = originUrl + "/manifest/" + fileName;
         
         statusLabel.setText("Starting download: " + fileName);
+        
+        // Check if file has manifest before starting download
+        if (!fileInfo.isHasManifest()) {
+            showError("File " + fileName + " does not have a manifest. Cannot download.");
+            return;
+        }
+        
         mainApp.startDownload(manifestUrl); // Giữ nguyên logic download
         statusLabel.setText("Added: " + fileName + " to download queue");
+    }
+    
+    /**
+     * Hiển thị error message cho user
+     */
+    public void showError(String errorMessage) {
+        if (statusLabel != null) {
+            statusLabel.setText("❌ Error: " + errorMessage);
+            statusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+            
+            // Reset style sau 5 giây
+            javafx.animation.Timeline timeline = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(5), e -> {
+                    statusLabel.setStyle("");
+                })
+            );
+            timeline.play();
+        }
+        System.err.println("[UI Error] " + errorMessage);
     }
 
     /**

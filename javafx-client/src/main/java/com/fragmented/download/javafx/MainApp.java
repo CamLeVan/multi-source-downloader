@@ -67,6 +67,9 @@ public class MainApp extends Application {
     private final String peerId = UUID.randomUUID().toString(); // Unique peer ID
     private String localIP;
     private int peerPort;
+    
+    // Error callback để UI có thể hiển thị error message
+    private java.util.function.Consumer<String> downloadErrorCallback;
 
     @Override
     public void start(Stage primaryStage) throws IOException {
@@ -94,6 +97,11 @@ public class MainApp extends Application {
         DashboardController controller = loader.getController();
         controller.setMainApp(this);
         controller.setDownloadTasks(downloadTasks);
+        
+        // Setup error callback để UI có thể hiển thị error
+        setDownloadErrorCallback((errorMsg) -> {
+            controller.showError(errorMsg);
+        });
 
         // Load CSS stylesheet
         Scene scene = new Scene(root, 900, 700);
@@ -228,8 +236,35 @@ public class MainApp extends Application {
             startPeerRefreshThread(fileId);
 
         } catch (IOException e) {
+            String errorMsg = "Download failed: " + e.getMessage();
+            System.err.println(errorMsg);
             e.printStackTrace();
+            
+            // Notify UI about error
+            if (downloadErrorCallback != null) {
+                javafx.application.Platform.runLater(() -> {
+                    downloadErrorCallback.accept(errorMsg);
+                });
+            }
+        } catch (Exception e) {
+            String errorMsg = "Unexpected error: " + e.getMessage();
+            System.err.println(errorMsg);
+            e.printStackTrace();
+            
+            // Notify UI about error
+            if (downloadErrorCallback != null) {
+                javafx.application.Platform.runLater(() -> {
+                    downloadErrorCallback.accept(errorMsg);
+                });
+            }
         }
+    }
+    
+    /**
+     * Set error callback để UI có thể hiển thị error message
+     */
+    public void setDownloadErrorCallback(java.util.function.Consumer<String> callback) {
+        this.downloadErrorCallback = callback;
     }
 
     /**
@@ -401,10 +436,16 @@ public class MainApp extends Application {
         Request request = new Request.Builder().url(manifestUrl).build();
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
+                String errorMsg;
+                if (response.code() == 404) {
+                    errorMsg = "Manifest not found (404). File may not exist on server.";
+                } else {
+                    errorMsg = "Failed to download manifest: HTTP " + response.code();
+                }
                 System.err.println(String.format("[%s] [ORIGIN] ✗ Manifest request failed | Status: %d | FROM: %s:8443", 
                     java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
                     response.code(), originIP));
-                throw new IOException("Failed to download manifest: " + response);
+                throw new IOException(errorMsg);
             }
             ResponseBody body = response.body();
             if (body == null) {
