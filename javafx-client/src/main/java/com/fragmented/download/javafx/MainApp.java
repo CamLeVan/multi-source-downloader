@@ -139,6 +139,12 @@ public class MainApp extends Application {
             // 1. Fetch the manifest from the server
             FlowLogger.logStep(step++, "Fetching manifest", localIP, 0, extractIPFromUrl(ORIGIN_SERVER_URL), 8443);
             ManifestModel manifest = fetchManifest(manifestUrl);
+            
+            // Fix: Replace localhost in manifest sources with actual Origin Server IP
+            String originServerIP = extractIPFromUrl(ORIGIN_SERVER_URL);
+            String originServerBaseUrl = ORIGIN_SERVER_URL.replace("https://", "http://").replace(":8443", ":8080");
+            fixManifestSources(manifest, originServerBaseUrl);
+            
             FlowLogger.logInfo("Manifest received: " + manifest.getPieces().size() + " pieces, " + 
                 (manifest.getFileSize() / 1024 / 1024) + " MB", localIP);
 
@@ -265,6 +271,40 @@ public class MainApp extends Application {
      */
     public void setDownloadErrorCallback(java.util.function.Consumer<String> callback) {
         this.downloadErrorCallback = callback;
+    }
+
+    /**
+     * Fix manifest sources: Replace localhost với Origin Server IP thực tế
+     */
+    private void fixManifestSources(ManifestModel manifest, String originServerBaseUrl) {
+        String originServerHost = extractIPFromUrl(originServerBaseUrl);
+        int originServerPort = 8080; // Default port
+        
+        // Extract port from URL
+        try {
+            java.net.URL url = new java.net.URL(originServerBaseUrl);
+            originServerPort = url.getPort() > 0 ? url.getPort() : 8080;
+        } catch (Exception e) {
+            // Use default
+        }
+        
+        String originServerUrl = "http://" + originServerHost + ":" + originServerPort;
+        
+        for (PieceModel piece : manifest.getPieces()) {
+            List<String> fixedSources = new ArrayList<>();
+            for (String source : piece.getSources()) {
+                // Replace localhost với Origin Server IP thực tế
+                if (source.contains("localhost:8080") || source.contains("127.0.0.1:8080")) {
+                    String fixedSource = source.replace("http://localhost:8080", originServerUrl)
+                                             .replace("http://127.0.0.1:8080", originServerUrl);
+                    fixedSources.add(fixedSource);
+                    System.out.println("[FIX] Replaced localhost source: " + source + " → " + fixedSource);
+                } else {
+                    fixedSources.add(source);
+                }
+            }
+            piece.setSources(fixedSources);
+        }
     }
 
     /**

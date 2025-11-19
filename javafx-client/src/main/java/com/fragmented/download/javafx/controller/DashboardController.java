@@ -711,11 +711,11 @@ public class DashboardController {
         String fileName = null;
         
         // Ưu tiên lấy từ TextField
-        if (fileNameField.getText() != null && !fileNameField.getText().trim().isEmpty()) {
+        if (fileNameField != null && fileNameField.getText() != null && !fileNameField.getText().trim().isEmpty()) {
             fileName = fileNameField.getText().trim();
         }
-        // Nếu không có, lấy từ ComboBox
-        else if (fileComboBox.getValue() != null) {
+        // Nếu không có, lấy từ ComboBox (legacy - có thể null nếu FXML không có)
+        else if (fileComboBox != null && fileComboBox.getValue() != null) {
             fileName = fileComboBox.getValue();
         }
         
