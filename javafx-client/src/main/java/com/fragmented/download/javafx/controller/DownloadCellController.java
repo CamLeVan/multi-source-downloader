@@ -75,7 +75,15 @@ public class DownloadCellController extends ListCell<DownloadTask> {
                     fxmlLoader.load();
                 } catch (IOException e) {
                     e.printStackTrace();
+                    setText("Error loading cell: " + e.getMessage());
+                    return;
                 }
+            }
+
+            // Check if FXML loaded successfully
+            if (fileNameLabel == null || progressBar == null || statusLabel == null || hBox == null) {
+                setText("Error: FXML not loaded properly");
+                return;
             }
 
             // Tuần 6: Bind UI elements to DownloadTask properties

@@ -1,5 +1,6 @@
 package com.fragmented.download.javafx.model;
 
+import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import javafx.beans.property.*;
 import java.time.LocalDateTime;
@@ -14,21 +15,28 @@ import java.time.format.DateTimeFormatter;
 public class FileInfo {
     // Temporary fields for Gson deserialization
     @SerializedName("fileName")
+    @Expose
     private String _fileName;
     
     @SerializedName("size")
+    @Expose
     private Long _size;
     
     @SerializedName("lastModified")
+    @Expose
     private Object _lastModifiedObj; // Spring Boot serialize LocalDateTime thành array [year, month, day, ...]
     
     @SerializedName("mirrorsCount")
+    @Expose
     private Integer _mirrorsCount;
     
     @SerializedName("hasManifest")
+    @Expose
     private Boolean _hasManifest;
 
     // JavaFX Properties (sẽ được set sau khi deserialize)
+    // Gson sẽ bỏ qua các Properties này vì chúng không có @Expose
+    // (không cần @Expose(serialize = false, deserialize = false) vì Gson đã excludeFieldsWithoutExposeAnnotation)
     private final StringProperty fileName = new SimpleStringProperty();
     private final LongProperty size = new SimpleLongProperty();
     private final ObjectProperty<LocalDateTime> lastModified = new SimpleObjectProperty<>();

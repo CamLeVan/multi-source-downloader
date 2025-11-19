@@ -20,6 +20,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
@@ -88,7 +89,10 @@ public class DashboardController {
     private ObservableList<DownloadTask> downloadTasks;
     private MainApp mainApp;
     private final OkHttpClient httpClient = new OkHttpClient();
-    private final Gson gson = new Gson();
+    // Gson với excludeFieldsWithoutExposeAnnotation để chỉ deserialize fields có @Expose
+    private final Gson gson = new GsonBuilder()
+        .excludeFieldsWithoutExposeAnnotation()
+        .create();
     
     // Phase 1.6: Store fileInfos để hiển thị metadata
     private java.util.Map<String, FileInfo> fileInfoMap = new java.util.HashMap<>();

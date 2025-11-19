@@ -24,6 +24,7 @@ import com.fragmented.download.javafx.logic.p2p.PeerServer;
 import com.fragmented.download.javafx.logic.p2p.TrackerClient;
 import com.fragmented.download.javafx.logic.storage.JsonStateStorage;
 import com.fragmented.download.javafx.logic.storage.SparseFileStorage;
+import com.fragmented.download.javafx.logic.streaming.LocalStreamingServer;
 import com.fragmented.download.javafx.logic.vfs.VirtualDownloaderFS;
 import com.fragmented.download.javafx.model.DownloadTask;
 import com.fragmented.download.javafx.util.ConfigManager;
@@ -61,6 +62,7 @@ public class MainApp extends Application {
     private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList(); // Tuần 6: Multi-download
     private PeerServer peerServer;
     private VirtualDownloaderFS vfs;
+    private LocalStreamingServer streamingServer; // HTTP streaming server (works on all OS)
     private TrackerClient trackerClient;
     private final String peerId = UUID.randomUUID().toString(); // Unique peer ID
     private String localIP;
@@ -197,9 +199,13 @@ public class MainApp extends Application {
             FlowLogger.logStep(step++, "Creating Scheduler", localIP, null);
             Scheduler scheduler = new Scheduler(manifest, downloadClient, errorCallback, 4, pieceStorage, stateStorage, localFilePath, fileId);
 
-            // 9. Mount the Virtual Filesystem (only once)
+            // 9. Mount the Virtual Filesystem (only once) - macOS/Linux only
             FlowLogger.logStep(step++, "Mounting Virtual Filesystem", localIP, null);
             mountVFS(fileId, manifest, scheduler, pieceStorage, stateStorage, localFilePath);
+
+            // 9.5. Start Local Streaming Server (works on all OS: Windows, macOS, Linux)
+            FlowLogger.logStep(step++, "Starting Local Streaming Server", localIP, null);
+            startStreamingServer(fileId, manifest, scheduler, pieceStorage, stateStorage, localFilePath);
 
             // 10. Create and add the download task to the list
             DownloadTask task = new DownloadTask(fileId, scheduler);
@@ -355,6 +361,37 @@ public class MainApp extends Application {
         }
     }
 
+    /**
+     * Start Local HTTP Streaming Server (works on all OS: Windows, macOS, Linux)
+     * Cho phép truy cập file đang tải qua HTTP URL
+     */
+    private void startStreamingServer(String fileId, ManifestModel manifest, Scheduler scheduler, 
+                                      PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {
+        if (streamingServer == null) {
+            new Thread(() -> {
+                try {
+                    LocalStreamingServer server = new LocalStreamingServer(
+                        manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
+                    );
+                    this.streamingServer = server;
+                    server.start();
+                    
+                    System.out.println("✅ Local Streaming Server started!");
+                    System.out.println("📺 Streaming URL: " + server.getStreamingUrl());
+                    System.out.println("💡 You can open this URL in:");
+                    System.out.println("   - Video players (VLC, MPV, etc.)");
+                    System.out.println("   - Web browsers (for download)");
+                    System.out.println("   - Any HTTP client");
+                    System.out.println("   - File will be downloaded on-demand when accessed");
+                } catch (Exception e) {
+                    System.err.println("WARNING: Failed to start Local Streaming Server. The application will continue without it.");
+                    System.err.println("Error: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+    }
+
     private ManifestModel fetchManifest(String manifestUrl) throws IOException {
         String originIP = extractIPFromUrl(ORIGIN_SERVER_URL);
         System.out.println(String.format("[%s] [ORIGIN] GET %s | FROM: %s → TO: %s:8443", 
@@ -392,6 +429,10 @@ public class MainApp extends Application {
             }
         } catch (Throwable e) {
             System.err.println("Error while unmounting VFS: " + e.getMessage());
+        }
+        System.out.println("Stopping streaming server...");
+        if (streamingServer != null) {
+            streamingServer.close();
         }
         System.out.println("Shutting down application...");
         if (peerServer != null) {
