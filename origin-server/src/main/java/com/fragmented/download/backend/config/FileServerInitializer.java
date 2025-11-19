@@ -13,8 +13,8 @@ import java.security.NoSuchAlgorithmException;
 public class FileServerInitializer implements CommandLineRunner {
 
     public static final String SERVER_FILE_DIR = "server_files";
-    public static final String TEST_FILE_NAME = "100MB.zip";
-    public static final long TEST_FILE_SIZE = 1024 * 1024 * 100; // 100 MB
+    public static final String TEST_FILE_NAME = "2GB.zip";
+    public static final long TEST_FILE_SIZE = 1024 * 1024 * 1024 * 2; // 2 GB
 
     @Override
     public void run(String... args) throws Exception {
@@ -25,7 +25,7 @@ public class FileServerInitializer implements CommandLineRunner {
 
         File file = new File(directory, TEST_FILE_NAME);
         if (!file.exists() || file.length() != TEST_FILE_SIZE) {
-            System.out.println("Creating a dummy 100MB file for serving: " + file.getAbsolutePath());
+            System.out.println("Creating a dummy 2GB file for serving: " + file.getAbsolutePath());
             try {
                 // Create the sparse file directly
                 try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {

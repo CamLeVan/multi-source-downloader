@@ -1,6 +1,7 @@
 package com.fragmented.download.backend.controller;
 
 import com.fragmented.download.backend.config.FileServerInitializer;
+import com.fragmented.download.backend.dto.FileInfoDTO;
 import com.fragmented.download.core.model.ManifestModel;
 import com.google.gson.Gson;
 import org.springframework.core.io.InputStreamResource;
@@ -30,7 +31,60 @@ public class ManifestController {
     private final Gson gson = new Gson();
 
     /**
-     * API để list tất cả files có sẵn trên server.
+     * API để lấy metadata của tất cả files (Phase 1.2: Enhanced API với metadata)
+     * Trả về thông tin đầy đủ: fileName, size, lastModified, mirrorsCount, hasManifest
+     */
+    @GetMapping("/files/info")
+    public ResponseEntity<java.util.List<FileInfoDTO>> getFilesInfo(jakarta.servlet.http.HttpServletRequest request) {
+        String clientIP = request.getRemoteAddr();
+        System.out.println(String.format("[%s] [ORIGIN] GET /files/info | FROM: %s → TO: Origin", 
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+            clientIP));
+        
+        try {
+            Path serverDir = Paths.get(FileServerInitializer.SERVER_FILE_DIR);
+            java.util.List<FileInfoDTO> fileInfos = new java.util.ArrayList<>();
+            
+            // Scan thư mục và lấy metadata của mỗi file
+            try (java.util.stream.Stream<Path> paths = Files.walk(serverDir, 1)) {
+                paths.filter(Files::isRegularFile)
+                     .filter(p -> !p.getFileName().toString().endsWith(".manifest.json"))
+                     .forEach(p -> {
+                         try {
+                             String fileName = p.getFileName().toString();
+                             long size = Files.size(p);
+                             java.time.LocalDateTime lastModified = java.time.LocalDateTime.ofInstant(
+                                 Files.getLastModifiedTime(p).toInstant(),
+                                 java.time.ZoneId.systemDefault()
+                             );
+                             
+                             // Check if manifest exists
+                             Path manifestPath = Paths.get(FileServerInitializer.SERVER_FILE_DIR, fileName + ".manifest.json");
+                             boolean hasManifest = Files.exists(manifestPath);
+                             
+                             FileInfoDTO fileInfo = new FileInfoDTO(fileName, size, lastModified, hasManifest);
+                             fileInfos.add(fileInfo);
+                         } catch (IOException e) {
+                             System.err.println("Error reading file info: " + p + " - " + e.getMessage());
+                         }
+                     });
+            }
+            
+            System.out.println(String.format("[%s] [ORIGIN] ✓ File info sent | FROM: Origin → TO: %s | Count: %d", 
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                clientIP, fileInfos.size()));
+            
+            return ResponseEntity.ok(fileInfos);
+        } catch (IOException e) {
+            System.err.println(String.format("[%s] [ORIGIN] ✗ Error listing files info | FROM: %s | Error: %s", 
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                clientIP, e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * API để list tất cả files có sẵn trên server (Legacy - giữ lại để backward compatibility).
      * Client dùng để hiển thị danh sách files có thể download.
      */
     @GetMapping("/files/list")

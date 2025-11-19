@@ -139,33 +139,12 @@ public class DownloadCellController extends ListCell<DownloadTask> {
         }
         
         // Bind peer progress (sum of all peers)
-        if (peerProgress != null) {
-            peerProgressBar.progressProperty().bind(
-                Bindings.createDoubleBinding(
-                    () -> {
-                        long totalBytes = task.getScheduler().getManifest().getFileSize();
-                        long peerBytes = task.getSourceProgresses().stream()
-                            .filter(sp -> sp.getSourceType() == SourceProgress.SourceType.PEER)
-                            .mapToLong(SourceProgress::getBytesDownloaded)
-                            .sum();
-                        return totalBytes > 0 ? (double) peerBytes / totalBytes : 0.0;
-                    },
-                    task.getSourceProgresses()
-                )
-            );
-            peerLabel.textProperty().bind(
-                Bindings.createStringBinding(
-                    () -> {
-                        long peerBytes = task.getSourceProgresses().stream()
-                            .filter(sp -> sp.getSourceType() == SourceProgress.SourceType.PEER)
-                            .mapToLong(SourceProgress::getBytesDownloaded)
-                            .sum();
-                        return formatBytes(peerBytes);
-                    },
-                    task.getSourceProgresses()
-                )
-            );
-        }
+        // Listen to ObservableList changes và update binding khi có peer mới
+        task.getSourceProgresses().addListener((javafx.collections.ListChangeListener<SourceProgress>) change -> {
+            // Re-bind khi list thay đổi
+            updatePeerBinding(task);
+        });
+        updatePeerBinding(task);
     }
     
     private SourceProgress findSourceProgress(DownloadTask task, SourceProgress.SourceType type) {
@@ -173,6 +152,44 @@ public class DownloadCellController extends ListCell<DownloadTask> {
             .filter(sp -> sp.getSourceType() == type)
             .findFirst()
             .orElse(null);
+    }
+    
+    /**
+     * Update binding cho peer progress bars
+     */
+    private void updatePeerBinding(DownloadTask task) {
+        // Unbind cũ trước
+        peerProgressBar.progressProperty().unbind();
+        peerLabel.textProperty().unbind();
+        
+        // Tạo binding động từ ObservableList
+        // Binding sẽ tự động update khi list hoặc properties thay đổi
+        peerProgressBar.progressProperty().bind(
+            Bindings.createDoubleBinding(
+                () -> {
+                    long totalBytes = task.getScheduler().getManifest().getFileSize();
+                    long peerBytes = task.getSourceProgresses().stream()
+                        .filter(sp -> sp.getSourceType() == SourceProgress.SourceType.PEER)
+                        .mapToLong(SourceProgress::getBytesDownloaded)
+                        .sum();
+                    return totalBytes > 0 ? (double) peerBytes / totalBytes : 0.0;
+                },
+                task.getSourceProgresses()
+            )
+        );
+        
+        peerLabel.textProperty().bind(
+            Bindings.createStringBinding(
+                () -> {
+                    long peerBytes = task.getSourceProgresses().stream()
+                        .filter(sp -> sp.getSourceType() == SourceProgress.SourceType.PEER)
+                        .mapToLong(SourceProgress::getBytesDownloaded)
+                        .sum();
+                    return formatBytes(peerBytes);
+                },
+                task.getSourceProgresses()
+            )
+        );
     }
     
     private String formatBytes(long bytes) {

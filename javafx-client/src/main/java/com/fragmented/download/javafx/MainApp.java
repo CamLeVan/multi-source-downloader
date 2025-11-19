@@ -93,8 +93,13 @@ public class MainApp extends Application {
         controller.setMainApp(this);
         controller.setDownloadTasks(downloadTasks);
 
+        // Load CSS stylesheet
+        Scene scene = new Scene(root, 900, 700);
+        String cssPath = getClass().getResource("/styles/dashboard.css").toExternalForm();
+        scene.getStylesheets().add(cssPath);
+        
         primaryStage.setTitle("Multi-Source Downloader - " + CLIENT_NAME + " (" + localIP + ")");
-        primaryStage.setScene(new Scene(root, 900, 700));
+        primaryStage.setScene(scene);
         primaryStage.show();
 
         // Auto-download DISABLED - User will select files from UI

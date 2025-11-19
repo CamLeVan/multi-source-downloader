@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<!-- Phase 1.7: File Card Component - Hiển thị file info như card -->
+<HBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.fragmented.download.javafx.controller.FileCardController"
+      fx:id="root"
+      styleClass="file-card" spacing="15" alignment="CENTER_LEFT">
+    
+    <padding>
+        <Insets bottom="18" left="18" right="18" top="18"/>
+    </padding>
+
+    <!-- Phase 3: Icon với styling đẹp hơn -->
+    <VBox alignment="CENTER" minWidth="70" maxWidth="70">
+        <Label fx:id="iconLabel" text="📄" style="-fx-font-size: 40px; -fx-padding: 5px;"/>
+    </VBox>
+
+    <!-- File Info Section -->
+    <VBox HBox.hgrow="ALWAYS" spacing="8">
+        <!-- Title và Category với Popular tag -->
+        <HBox spacing="12" alignment="CENTER_LEFT">
+            <Label fx:id="fileNameLabel" styleClass="file-name-label"/>
+            <Label fx:id="categoryLabel" styleClass="category-label" text="File"/>
+            <Label fx:id="popularTagLabelTop" styleClass="popular-tag" text="Popular" visible="false"/>
+        </HBox>
+        
+        <!-- Description như trong ảnh -->
+        <Label fx:id="descriptionLabel" styleClass="description-label" text="Available for download" wrapText="true"/>
+        
+        <!-- Metadata Row như trong ảnh -->
+        <HBox spacing="20" alignment="CENTER_LEFT">
+            <!-- Size -->
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <Label text="💾" style="-fx-font-size: 12px;"/>
+                <Label fx:id="sizeLabel" styleClass="metadata-label"/>
+            </HBox>
+            
+            <!-- Date -->
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <Label text="📅" style="-fx-font-size: 12px;"/>
+                <Label fx:id="dateLabel" styleClass="metadata-label"/>
+            </HBox>
+            
+            <!-- Downloads (placeholder - sẽ thêm sau) -->
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <Label text="⬇️" style="-fx-font-size: 12px;"/>
+                <Label fx:id="downloadsLabel" styleClass="metadata-label" text="0 downloads"/>
+            </HBox>
+            
+            <!-- Rating (placeholder - sẽ thêm sau) -->
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <Label text="⭐" style="-fx-font-size: 12px;"/>
+                <Label fx:id="ratingLabel" styleClass="metadata-label" text="N/A"/>
+            </HBox>
+            
+        </HBox>
+        
+        <!-- Mirrors và Version info như trong ảnh (format: "3 mirrors • v22.04.3") -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label fx:id="mirrorsVersionLabel" styleClass="metadata-label" text="0 mirrors"/>
+        </HBox>
+    </VBox>
+
+    <!-- Download Button -->
+    <Button fx:id="downloadButton" text="Download" onAction="#onDownloadClick"
+            styleClass="download-button"/>
+
+</HBox>
+

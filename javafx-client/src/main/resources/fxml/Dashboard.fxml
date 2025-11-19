@@ -14,27 +14,44 @@
     </padding>
 
     <!-- Title -->
-    <Label text="Multi-Source Download Manager" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Multi-Source Download Manager" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+        <Button fx:id="refreshButton" text="Refresh" onAction="#onRefreshFiles" style="-fx-padding: 5px 15px;"/>
+    </HBox>
 
-    <!-- File Selection Section -->
+    <!-- Phase 2: Search and Filter Section -->
+    <VBox spacing="10.0" style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 15;">
+        <HBox spacing="10.0" alignment="CENTER_LEFT">
+            <Label text="🔍" style="-fx-font-size: 16px;"/>
+            <TextField fx:id="searchField" promptText="Search files..." prefWidth="400.0" HBox.hgrow="ALWAYS" onKeyReleased="#onSearchTextChanged"/>
+            <ComboBox fx:id="sortComboBox" promptText="Sort by..." prefWidth="150.0"/>
+        </HBox>
+        <HBox spacing="10.0" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+            <Button fx:id="filterAllButton" text="All" onAction="#onFilterCategory" styleClass="category-filter-button"/>
+            <Button fx:id="filterArchiveButton" text="Archive" onAction="#onFilterCategory" styleClass="category-filter-button"/>
+            <Button fx:id="filterApplicationButton" text="Application" onAction="#onFilterCategory" styleClass="category-filter-button"/>
+            <Button fx:id="filterDocumentButton" text="Document" onAction="#onFilterCategory" styleClass="category-filter-button"/>
+            <Button fx:id="filterVideoButton" text="Video" onAction="#onFilterCategory" styleClass="category-filter-button"/>
+            <Button fx:id="filterImageButton" text="Image" onAction="#onFilterCategory" styleClass="category-filter-button"/>
+        </HBox>
+    </VBox>
+
+    <!-- Phase 1.7: File List Section với Card Layout -->
+    <VBox spacing="10.0" VBox.vgrow="ALWAYS">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Available Files:" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+            <Label fx:id="fileCountLabel" text="(0 files)" style="-fx-font-size: 12px; -fx-text-fill: #666666;"/>
+        </HBox>
+        <ListView fx:id="fileListView" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+            <!-- Generic type sẽ được set trong controller -->
+        </ListView>
+    </VBox>
+
+    <!-- Legacy: TextField để nhập custom file name (backward compatibility) -->
     <VBox spacing="10.0" style="-fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 15;">
-        <Label text="Select or Enter File to Download:" style="-fx-font-weight: bold;"/>
-        
-        <!-- ComboBox để chọn file có sẵn -->
+        <Label text="Or Enter Custom File Name:" style="-fx-font-weight: bold;"/>
         <HBox spacing="10.0" alignment="CENTER_LEFT">
-            <Label text="Available Files:" minWidth="100"/>
-            <ComboBox fx:id="fileComboBox" promptText="Select a file..." prefWidth="300.0" HBox.hgrow="ALWAYS"/>
-            <Button fx:id="refreshButton" text="Refresh" onAction="#onRefreshFiles"/>
-        </HBox>
-        
-        <!-- TextField để nhập custom file name -->
-        <HBox spacing="10.0" alignment="CENTER_LEFT">
-            <Label text="Or Enter File:" minWidth="100"/>
             <TextField fx:id="fileNameField" promptText="e.g., 100MB.zip" prefWidth="300.0" HBox.hgrow="ALWAYS"/>
-        </HBox>
-        
-        <!-- Button để bắt đầu download -->
-        <HBox spacing="10.0" alignment="CENTER">
             <Button fx:id="addDownloadButton" text="Add Download" onAction="#onAddDownload" 
                     style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10px 30px;"/>
         </HBox>
