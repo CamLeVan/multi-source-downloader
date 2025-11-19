@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.fragmented.download.core.client.ErrorCallback;
-import com.fragmented.download.core.model.DownloadState;
 import com.fragmented.download.core.model.ManifestModel;
 import com.fragmented.download.core.model.PieceModel;
 import com.fragmented.download.core.storage.IStateStorage;
@@ -164,9 +163,6 @@ public class MainApp extends Application {
             FlowLogger.logStep(step++, "Setting up storage", localIP, null);
             IStateStorage stateStorage = new JsonStateStorage();
             PieceStorage pieceStorage = new SparseFileStorage();
-
-            // Reset state nếu lần trước download đã hoàn tất nhưng người dùng yêu cầu tải lại
-            handleExistingDownloadState(manifest, stateStorage, fileId, localFilePath);
 
             // Ensure the target file is created (as a sparse file)
             pieceStorage.createSparseFile(localFilePath, manifest.getFileSize());
@@ -407,40 +403,6 @@ public class MainApp extends Application {
         refreshThread.setDaemon(true);
         refreshThread.setName("peer-refresh-thread");
         refreshThread.start();
-    }
-
-    /**
-     * Nếu state lưu trước đó đã hoàn tất (100%) hoặc không còn phù hợp với manifest hiện tại,
-     * tự động reset để đảm bảo lần tải mới thật sự thực hiện lại từ đầu.
-     */
-    private void handleExistingDownloadState(ManifestModel manifest, IStateStorage stateStorage,
-                                             String fileId, String localFilePath) {
-        try {
-            DownloadState existingState = stateStorage.loadState(fileId);
-            if (existingState == null) {
-                return;
-            }
-
-            boolean pieceCountMismatch = existingState.getTotalPieces() != manifest.getPieces().size();
-            boolean alreadyCompleted = existingState.getCompletedPieceCount() == existingState.getTotalPieces();
-
-            if (pieceCountMismatch || alreadyCompleted) {
-                String reason = pieceCountMismatch ? "piece count mismatch" : "already completed";
-                FlowLogger.logInfo("Resetting stored state for " + fileId + " (" + reason + ")", localIP);
-
-                DownloadState freshState = new DownloadState(manifest.getPieces().size());
-                stateStorage.saveState(freshState, fileId);
-
-                try {
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(localFilePath));
-                    FlowLogger.logInfo("Deleted previous local file before re-download: " + localFilePath, localIP);
-                } catch (IOException ex) {
-                    FlowLogger.logError("Failed to delete old file while resetting state", localIP, ex.getMessage());
-                }
-            }
-        } catch (IOException e) {
-            FlowLogger.logError("Failed to inspect/reset existing download state", localIP, e.getMessage());
-        }
     }
 
     private void mountVFS(String fileId, ManifestModel manifest, Scheduler scheduler, PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {

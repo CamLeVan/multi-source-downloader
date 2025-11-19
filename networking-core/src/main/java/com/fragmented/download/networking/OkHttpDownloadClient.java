@@ -19,11 +19,13 @@ public class OkHttpDownloadClient implements DownloadClient {
 
     private final OkHttpClient httpClient;
     private final long pieceSize;
+    private final long fileSize;
     private final ScheduledExecutorService scheduler;
 
-    public OkHttpDownloadClient(OkHttpClient httpClient, int numberOfThreads, long pieceSize) {
+    public OkHttpDownloadClient(OkHttpClient httpClient, int numberOfThreads, long pieceSize, long fileSize) {
         this.httpClient = httpClient;
         this.pieceSize = pieceSize;
+        this.fileSize = fileSize;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "okhttp-retry-scheduler");
             t.setDaemon(true);
@@ -53,7 +55,13 @@ public class OkHttpDownloadClient implements DownloadClient {
 
         String sourceUrl = piece.getSources().get(sourceIndex);
         long start = (long) piece.getId() * pieceSize;
-        long end = start + pieceSize - 1;
+
+        if (start >= fileSize) {
+            future.completeExceptionally(new IOException("Invalid piece offset for piece " + piece.getId() + ". Start exceeds file size."));
+            return;
+        }
+
+        long end = Math.min(start + pieceSize - 1, fileSize - 1);
 
         // Tạo request HTTP Range chính xác
         Request request = new Request.Builder()
