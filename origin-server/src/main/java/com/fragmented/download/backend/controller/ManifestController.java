@@ -71,9 +71,10 @@ public class ManifestController {
     @GetMapping("/manifest/{fileName}")
     public ManifestModel getManifest(@PathVariable String fileName, jakarta.servlet.http.HttpServletRequest request) throws FileNotFoundException {
         String clientIP = request.getRemoteAddr();
-        System.out.println(String.format("[%s] [ORIGIN] GET /manifest/%s | FROM: %s → TO: Origin:8443", 
+        int serverPort = request.getServerPort();
+        System.out.println(String.format("[%s] [ORIGIN] GET /manifest/%s | FROM: %s → TO: Origin:%d", 
             java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-            fileName, clientIP));
+            fileName, clientIP, serverPort));
         
         String manifestFileName = fileName + ".manifest.json";
         Path manifestPath = Paths.get(FileServerInitializer.SERVER_FILE_DIR, manifestFileName);
@@ -87,9 +88,10 @@ public class ManifestController {
 
         try (FileReader reader = new FileReader(manifestPath.toFile())) {
             ManifestModel manifest = gson.fromJson(reader, ManifestModel.class);
-            System.out.println(String.format("[%s] [ORIGIN] ✓ Manifest sent | FROM: Origin:8443 → TO: %s | Pieces: %d", 
+            int serverPort = request.getServerPort();
+            System.out.println(String.format("[%s] [ORIGIN] ✓ Manifest sent | FROM: Origin:%d → TO: %s | Pieces: %d", 
                 java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                clientIP, manifest.getPieces().size()));
+                serverPort, clientIP, manifest.getPieces().size()));
             return manifest;
         } catch (IOException e) {
             System.err.println(String.format("[%s] [ORIGIN] ✗ Error reading manifest | FROM: %s | Error: %s", 
@@ -110,10 +112,11 @@ public class ManifestController {
             jakarta.servlet.http.HttpServletRequest request)
             throws IOException {
         String clientIP = request.getRemoteAddr();
+        int serverPort = request.getServerPort();
         if (rangeHeader != null) {
-            System.out.println(String.format("[%s] [ORIGIN] GET /files/%s | Range: %s | FROM: %s → TO: Origin:8443", 
+            System.out.println(String.format("[%s] [ORIGIN] GET /files/%s | Range: %s | FROM: %s → TO: Origin:%d", 
                 java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                fileName, rangeHeader, clientIP));
+                fileName, rangeHeader, clientIP, serverPort));
         }
 
         Path filePath = Paths.get(FileServerInitializer.SERVER_FILE_DIR, fileName);

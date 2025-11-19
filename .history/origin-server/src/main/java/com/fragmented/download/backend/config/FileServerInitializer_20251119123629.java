@@ -1,14 +1,13 @@
 package com.fragmented.download.backend.config;
 
+import com.fragmented.download.backend.util.ManifestGeneratorUtil;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.security.NoSuchAlgorithmException;
-
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-
-import com.fragmented.download.backend.util.ManifestGeneratorUtil;
 
 @Component
 public class FileServerInitializer implements CommandLineRunner {

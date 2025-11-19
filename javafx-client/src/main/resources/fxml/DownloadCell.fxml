@@ -8,8 +8,8 @@
 <?import javafx.scene.layout.VBox?>
 
 <!-- Tuần 6: Custom cell cho ListView - mỗi download item -->
-<HBox xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER_LEFT" spacing="10"
-      fx:controller="com.fragmented.download.javafx.controller.DownloadCellController">
+<!-- Note: Controller is set programmatically in DownloadCellController.updateItem() -->
+<HBox xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER_LEFT" spacing="10">
     <padding>
         <Insets bottom="5" left="10" right="10" top="5"/>
     </padding>

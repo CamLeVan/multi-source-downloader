@@ -55,7 +55,7 @@ public class MainApp extends Application {
     private static final String TRACKER_URL = ConfigManager.get("tracker.url", "http://localhost:8081");
     private static final String ORIGIN_SERVER_URL = ConfigManager.get("origin.server.url", "https://localhost:8443");
     private static final String CLIENT_NAME = ConfigManager.get("client.name", "Client-1");
-    private static final String MANIFEST_URL = ORIGIN_SERVER_URL + "/manifest/100MB.zip";
+    private static final String MANIFEST_URL = ORIGIN_SERVER_URL + "/manifest/2GB.zip";
     
     private final OkHttpClient httpClient = new OkHttpClient();
     private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList(); // Tuần 6: Multi-download
@@ -122,7 +122,8 @@ public class MainApp extends Application {
         
         try {
             // 1. Fetch the manifest from the server
-            FlowLogger.logStep(step++, "Fetching manifest", localIP, 0, extractIPFromUrl(ORIGIN_SERVER_URL), 8443);
+            int originPort = extractPortFromUrl(ORIGIN_SERVER_URL);
+            FlowLogger.logStep(step++, "Fetching manifest", localIP, 0, extractIPFromUrl(ORIGIN_SERVER_URL), originPort);
             ManifestModel manifest = fetchManifest(manifestUrl);
             FlowLogger.logInfo("Manifest received: " + manifest.getPieces().size() + " pieces, " + 
                 (manifest.getFileSize() / 1024 / 1024) + " MB", localIP);
@@ -292,6 +293,35 @@ public class MainApp extends Application {
             return "unknown";
         }
     }
+    
+    /**
+     * Extract Port từ URL
+     */
+    private int extractPortFromUrl(String url) {
+        try {
+            if (url.startsWith("http://")) {
+                url = url.substring(7);
+            } else if (url.startsWith("https://")) {
+                url = url.substring(8);
+            }
+            int colonIndex = url.indexOf(':');
+            if (colonIndex > 0) {
+                int slashIndex = url.indexOf('/', colonIndex);
+                if (slashIndex > 0) {
+                    return Integer.parseInt(url.substring(colonIndex + 1, slashIndex));
+                } else {
+                    return Integer.parseInt(url.substring(colonIndex + 1));
+                }
+            }
+            // Default ports
+            if (url.startsWith("https://")) {
+                return 8443;
+            }
+            return 8080;
+        } catch (Exception e) {
+            return 8080; // Default to HTTP port
+        }
+    }
 
     /**
      * Background thread để refresh peer list định kỳ
@@ -352,16 +382,17 @@ public class MainApp extends Application {
 
     private ManifestModel fetchManifest(String manifestUrl) throws IOException {
         String originIP = extractIPFromUrl(ORIGIN_SERVER_URL);
-        System.out.println(String.format("[%s] [ORIGIN] GET %s | FROM: %s → TO: %s:8443", 
+        int originPort = extractPortFromUrl(ORIGIN_SERVER_URL);
+        System.out.println(String.format("[%s] [ORIGIN] GET %s | FROM: %s → TO: %s:%d", 
             java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-            manifestUrl, localIP, originIP));
+            manifestUrl, localIP, originIP, originPort));
         
         Request request = new Request.Builder().url(manifestUrl).build();
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                System.err.println(String.format("[%s] [ORIGIN] ✗ Manifest request failed | Status: %d | FROM: %s:8443", 
+                System.err.println(String.format("[%s] [ORIGIN] ✗ Manifest request failed | Status: %d | FROM: %s:%d", 
                     java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                    response.code(), originIP));
+                    response.code(), originIP, originPort));
                 throw new IOException("Failed to download manifest: " + response);
             }
             ResponseBody body = response.body();
@@ -370,9 +401,9 @@ public class MainApp extends Application {
             }
             try (Reader reader = new InputStreamReader(body.byteStream())) {
                 ManifestModel manifest = new Gson().fromJson(reader, ManifestModel.class);
-                System.out.println(String.format("[%s] [ORIGIN] ✓ Manifest received | FROM: %s:8443 → TO: %s | Pieces: %d", 
+                System.out.println(String.format("[%s] [ORIGIN] ✓ Manifest received | FROM: %s:%d → TO: %s | Pieces: %d", 
                     java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                    originIP, localIP, manifest.getPieces().size()));
+                    originIP, originPort, localIP, manifest.getPieces().size()));
                 return manifest;
             }
         }

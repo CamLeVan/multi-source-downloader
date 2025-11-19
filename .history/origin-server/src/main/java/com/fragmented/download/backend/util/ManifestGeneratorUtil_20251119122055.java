@@ -1,5 +1,10 @@
 package com.fragmented.download.backend.util;
 
+import com.fragmented.download.core.model.ManifestModel;
+import com.fragmented.download.core.model.PieceModel;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -10,11 +15,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.fragmented.download.core.model.ManifestModel;
-import com.fragmented.download.core.model.PieceModel;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 public class ManifestGeneratorUtil {
 
@@ -45,19 +45,7 @@ public class ManifestGeneratorUtil {
         }
 
         System.out.println("Generating manifest for: " + sourceFile.getAbsolutePath() + " (size: " + fileSize + " bytes)");
-        
-        // Validate file size
-        if (fileSize <= 0) {
-            throw new IOException("Invalid file size: " + fileSize + " bytes. File must have size > 0 to generate manifest.");
-        }
-        
         int numberOfPieces = (int) Math.ceil((double) fileSize / PIECE_SIZE);
-        System.out.println("Calculated number of pieces: " + numberOfPieces + " (piece size: " + PIECE_SIZE + " bytes)");
-        
-        if (numberOfPieces == 0) {
-            throw new IOException("Cannot generate manifest: number of pieces is 0. File size too small.");
-        }
-        
         List<PieceModel> pieces = new ArrayList<>();
 
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
