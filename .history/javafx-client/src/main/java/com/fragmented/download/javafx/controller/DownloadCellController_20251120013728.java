@@ -38,9 +38,6 @@ public class DownloadCellController extends ListCell<DownloadTask> {
 
     @FXML
     private Button resumeButton;
-
-    @FXML
-    private Button playButton;
     
     @FXML
     private ProgressBar originProgressBar;
@@ -104,10 +101,6 @@ public class DownloadCellController extends ListCell<DownloadTask> {
             fileNameLabel.textProperty().bind(task.fileNameProperty());
             progressBar.progressProperty().bind(task.progressProperty());
             statusLabel.textProperty().bind(task.statusProperty());
-            
-            if (playButton != null) {
-                playButton.disableProperty().bind(task.streamingUrlProperty().isEmpty());
-            }
             
             // Bind per-source progress bars
             bindSourceProgress(task);
@@ -250,25 +243,6 @@ public class DownloadCellController extends ListCell<DownloadTask> {
         pauseButton.setDisable(false);
         resumeButton.setDisable(true);
         getItem().statusProperty().set("Downloading");
-    }
-
-    @FXML
-    private void handlePlay() {
-        String url = getItem().getStreamingUrl();
-        if (url != null && !url.isEmpty()) {
-            // Copy to clipboard
-            javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
-            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-            content.putString(url);
-            clipboard.setContent(content);
-            
-            // Show alert
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-            alert.setTitle("Streaming URL");
-            alert.setHeaderText("URL Copied to Clipboard!");
-            alert.setContentText("You can paste this URL into VLC or any video player:\n\n" + url);
-            alert.showAndWait();
-        }
     }
 }
 

@@ -1,274 +1,114 @@
-# Hướng Dẫn Demo Chi Tiết
+# Hướng Dẫn Demo Dự Án Multi-Source Downloader
 
-## 📋 Checklist Trước Khi Demo
+Tài liệu này hướng dẫn chi tiết cách thiết lập và thực hiện demo dự án trên 2 máy tính trong cùng mạng LAN.
 
-### Yêu cầu phần cứng
-- [ ] Máy A (Windows): Origin Server
-- [ ] Máy B (Mac): Client với VirtualFS
-- [ ] VM Linux (Optional): Mirror Server
-- [ ] Tất cả máy trong cùng mạng LAN
+## 1. Chuẩn Bị
 
-### Yêu cầu phần mềm
-- [ ] Java 21+ đã cài đặt trên tất cả máy
-- [ ] Maven 3.6+ đã cài đặt
-- [ ] macFUSE đã cài đặt trên Mac (cho VirtualFS)
-- [ ] Git đã cài đặt
-
-## 🚀 Setup Nhanh (5 phút)
-
-### Bước 1: Clone và Build
-
-```bash
-# Trên tất cả máy
-git clone <repository-url>
-cd multi-source-downloader
-mvn clean install -DskipTests
-```
-
-### Bước 2: Chạy Servers
-
-**Máy A (Windows) - Origin Server:**
-```bash
-cd origin-server
-mvn spring-boot:run
-```
-✅ Server chạy tại: `https://localhost:8443`
-
-**Máy bất kỳ - P2P Tracker:**
-```bash
-cd p2p-tracker
-mvn spring-boot:run
-```
-✅ Tracker chạy tại: `http://localhost:8081`
-
-**VM Linux (Optional) - Mirror Server:**
-```bash
-# Option 1: Nginx
-sudo apt install nginx
-sudo cp origin-server/server_files/100MB.zip /var/www/html/
-sudo systemctl start nginx
-
-# Option 2: Python
-cd origin-server/server_files
-python3 -m http.server 8080
-```
-
-### Bước 3: Chạy Client
-
-**Máy B (Mac) - Client:**
-```bash
-cd javafx-client
-mvn javafx:run
-```
-
-## 🎬 Demo Scenarios
-
-### Demo 1: Multi-Source Download ⚡
-
-**Mục tiêu:** Chứng minh tốc độ tải tăng nhờ tải song song
-
-**Setup:**
-1. ✅ Origin Server đang chạy (port 8443)
-2. ✅ Mirror Server đang chạy (port 8080 hoặc Nginx)
-3. ✅ Client đang chạy
-
-**Thực hiện:**
-1. Mở Client, bắt đầu download file `100MB.zip`
-2. Quan sát UI:
-   - **Progress Bar Tổng thể**: Tăng dần
-   - **Origin Progress**: Hiển thị bytes từ Origin Server
-   - **Mirror Progress**: Hiển thị bytes từ Mirror Server
-   - **Peers Progress**: 0 (chưa có peers)
-
-**Kết quả mong đợi:**
-- Tốc độ tải ~2x so với chỉ tải từ 1 nguồn
-- UI hiển thị rõ ràng lưu lượng từ mỗi nguồn
-- Console log: "Downloaded piece X from origin/mirror"
-
-**Điểm nhấn:**
-> "Như các bạn thấy, hệ thống đang tải song song từ cả Origin và Mirror, tốc độ tải tăng gấp đôi so với chỉ tải từ một nguồn duy nhất."
+*   **Thiết bị:** 2 Máy tính (Laptop/PC) kết nối cùng một mạng WiFi hoặc dây LAN.
+    *   **Máy 1 (Host):** Sẽ chạy Server (Origin, Tracker) và Client A.
+    *   **Máy 2 (Guest):** Sẽ chạy Client B.
+*   **Phần mềm:**
+    *   Java JDK 21 trở lên đã được cài đặt trên cả 2 máy.
+    *   Phần mềm xem video VLC (để demo tính năng Streaming).
+    *   Source code dự án (hoặc file JAR đã build).
 
 ---
 
-### Demo 2: Hash Mismatch & Auto-Retry 🔒
+## 2. Thiết Lập Môi Trường (Cấu Hình IP)
 
-**Mục tiêu:** Chứng minh tính toàn vẹn dữ liệu và tự động phục hồi
+Đây là bước quan trọng nhất. Nếu sai IP, các máy sẽ không thấy nhau.
 
-**Setup:**
-1. ✅ Origin Server đang chạy
-2. ✅ Mirror Server đang chạy (với file đúng)
-3. ✅ Client đang chạy
+### Bước 2.1: Lấy địa chỉ IP của Máy 1 (Host)
+1.  Trên **Máy 1**, mở **Command Prompt (CMD)** hoặc Terminal.
+2.  Gõ lệnh: `ipconfig` (Windows) hoặc `ifconfig` (Mac/Linux).
+3.  Tìm dòng **IPv4 Address** (hoặc `inet`).
+    *   *Ví dụ:* `192.168.1.10` (Hãy ghi nhớ số này).
 
-**Thực hiện:**
-1. **Trước khi demo:** Sửa một vài bytes trong file trên Origin Server:
-   ```bash
-   # Trên Origin Server
-   cd origin-server/server_files
-   # Sửa file 100MB.zip (làm hỏng piece #5)
-   # Hoặc sửa hash trong manifest JSON
-   ```
+### Bước 2.2: Cấu hình file `config.properties`
 
-2. Bắt đầu download trên Client
+Mở file `javafx-client/src/main/resources/config.properties` và chỉnh sửa nội dung.
 
-3. Quan sát Console:
-   ```
-   Hash mismatch for piece 5 from source index 0
-   Retrying piece 5 with remaining sources (removed first source)
-   Re-queuing piece 5 with remaining sources
-   Downloaded piece 5 from mirror
-   ```
-
-**Kết quả mong đợi:**
-- Hệ thống phát hiện hash mismatch
-- Tự động retry từ Mirror Server
-- Download tiếp tục thành công
-- Không cần can thiệp thủ công
-
-**Điểm nhấn:**
-> "Hệ thống tự động phát hiện dữ liệu bị hỏng và chuyển sang nguồn khác, đảm bảo tính toàn vẹn dữ liệu 100%."
-
----
-
-### Demo 3: Virtual Filesystem On-Demand 🎬
-
-**Mục tiêu:** Chứng minh có thể truy cập file ngay khi đang tải
-
-**Setup:**
-1. ✅ Client đang chạy trên Mac/Linux
-2. ✅ macFUSE/FUSE đã cài đặt
-3. ✅ VLC Media Player đã cài đặt
-
-**Thực hiện:**
-1. Bắt đầu download file lớn (ví dụ: 1GB video)
-2. **Pause download** sau khi tải được ~10%
-3. Mở Terminal:
-   ```bash
-   ls -lh ~/downloader-vfs/
-   # Sẽ thấy file ảo với size đầy đủ nhưng dung lượng thực tế nhỏ
-   ```
-4. Mở VLC:
-   - File → Open File
-   - Chọn: `~/downloader-vfs/100MB.zip`
-5. **Seek** đến giữa file (50%)
-6. Quan sát:
-   - Console: "VirtualFS: Piece X not available, downloading on-demand..."
-   - Progress bar tăng đột ngột
-   - VLC bắt đầu phát sau khi pieces được tải
-
-**Kết quả mong đợi:**
-- File xuất hiện trong VFS ngay lập tức
-- VLC có thể mở file ngay
-- Khi seek, hệ thống tự động tải pieces cần thiết
-- Dung lượng thực tế chỉ bằng các pieces đã tải
-
-**Điểm nhấn:**
-> "Người dùng có thể mở và sử dụng file ngay lập tức mà không cần đợi tải hết. Hệ thống sẽ tự động tải các phần cần thiết khi người dùng truy cập."
-
----
-
-### Demo 4: P2P Peer Exchange 👥
-
-**Mục tiêu:** Chứng minh khả năng chia sẻ pieces giữa peers
-
-**Setup:**
-1. ✅ P2P Tracker đang chạy
-2. ✅ Client A đang chạy (đã tải một phần file)
-3. ✅ Client B đang chạy (bắt đầu tải cùng file)
-
-**Thực hiện:**
-1. **Client A:**
-   - Bắt đầu download file `100MB.zip`
-   - Đợi tải được ~30% pieces
-   - **Không pause**, để chạy background
-
-2. **Client B:**
-   - Bắt đầu download cùng file `100MB.zip`
-   - Quan sát Console:
-     ```
-     Announced to tracker: fileId=100MB.zip, port=6881
-     Found 1 peers for fileId: 100MB.zip
-     Enriched manifest with peer sources
-     ```
-   - Quan sát UI:
-     - **Peers Progress Bar**: Bắt đầu tăng
-     - **Peer Label**: Hiển thị bytes từ peer
-
-3. **Kiểm tra Tracker:**
-   ```bash
-   curl http://localhost:8081/tracker/peers?fileId=100MB.zip
-   # Sẽ thấy: ["192.168.1.100:6881"]
-   ```
-
-**Kết quả mong đợi:**
-- Client B tự động discover Client A
-- Client B tải một số pieces từ Client A
-- UI hiển thị progress từ Peer
-- Giảm tải cho Origin Server
-
-**Điểm nhấn:**
-> "Hệ thống P2P cho phép các client chia sẻ pieces với nhau, giảm tải cho server trung tâm và tăng tốc độ tải tổng thể."
-
----
-
-### Demo 5: Resume Download 🔄
-
-**Mục tiêu:** Chứng minh khả năng resume sau khi dừng
-
-**Setup:**
-1. ✅ Client đang chạy
-
-**Thực hiện:**
-1. Bắt đầu download file lớn
-2. Đợi tải được ~50%
-3. Click **Pause** button
-4. Quan sát:
-   - Status: "Paused"
-   - Progress bar dừng lại
-5. **Đóng ứng dụng** (hoặc để pause)
-6. **Mở lại ứng dụng**
-7. Download sẽ tự động resume từ điểm đã dừng
-
-**Kiểm tra State:**
-```bash
-cat ~/.downloader/state/100MB.zip.state.json
-# Sẽ thấy JSON với thông tin pieces đã tải
+**Cấu hình cho Máy 1 (Host):**
+```properties
+# Thay 192.168.1.10 bằng IP thật của Máy 1
+tracker.url=http://192.168.1.10:8081
+origin.server.url=http://192.168.1.10:8080
+client.name=Host-Client
 ```
 
-**Kết quả mong đợi:**
-- Download tiếp tục từ điểm đã dừng
-- Không tải lại các pieces đã hoàn thành
-- State được lưu tự động
-
-**Điểm nhấn:**
-> "Hệ thống tự động lưu trạng thái download, cho phép resume bất cứ lúc nào mà không mất dữ liệu đã tải."
+**Cấu hình cho Máy 2 (Guest):**
+```properties
+# Vẫn trỏ về IP của Máy 1
+tracker.url=http://192.168.1.10:8081
+origin.server.url=http://192.168.1.10:8080
+client.name=Guest-Client
+```
 
 ---
 
-## 🎯 Tips cho Demo
+## 3. Kịch Bản Demo (Từng Bước)
 
-### Trước khi demo:
-1. **Test trước** tất cả scenarios
-2. **Chuẩn bị file lớn** (1GB+) để demo rõ ràng hơn
-3. **Kiểm tra network** giữa các máy
-4. **Chuẩn bị backup plan** nếu một component fail
+### Giai đoạn 1: Khởi động Hệ thống (Trên Máy 1)
 
-### Trong khi demo:
-1. **Giải thích từng bước** rõ ràng
-2. **Highlight các tính năng** quan trọng
-3. **So sánh** với cách tải truyền thống
-4. **Trả lời câu hỏi** về technical details
+1.  **Chạy Origin Server:**
+    *   Mở project `origin-server`.
+    *   Chạy class `OriginServerApplication`.
+    *   *Kiểm tra:* Mở trình duyệt, vào `http://localhost:8080/health` -> Thấy "OK".
 
-### Troubleshooting nhanh:
-- **Tracker không kết nối**: Kiểm tra IP và firewall
-- **VirtualFS không mount**: Kiểm tra macFUSE
-- **Hash mismatch liên tục**: Kiểm tra file trên server
-- **Peer không discover**: Kiểm tra Tracker đang chạy
+2.  **Chạy Tracker Server:**
+    *   Mở project `p2p-tracker`.
+    *   Chạy class `TrackerApplication`.
+    *   *Kiểm tra:* Mở trình duyệt, vào `http://localhost:8081/peers` -> Thấy danh sách trống `[]`.
 
-## 📊 Metrics để Highlight
+3.  **Chạy Client A (Host):**
+    *   Mở project `javafx-client`.
+    *   Chạy class `MainApp`.
+    *   Giao diện ứng dụng hiện lên với tên "Host-Client".
 
-- **Tốc độ tải**: 2x khi có 2 nguồn
-- **Data integrity**: 100% với SHA-256 verification
-- **Resume**: 0% data loss
-- **On-demand**: Truy cập file ngay lập tức
-- **P2P**: Giảm 50% tải cho Origin Server
+### Giai đoạn 2: Demo Streaming & Seeding (Trên Máy 1)
 
+1.  **Bắt đầu tải:**
+    *   Trên giao diện Client A, chọn file (ví dụ `video_100MB.mp4`) và bấm **Download**.
+2.  **Demo Streaming:**
+    *   Khi nút **"▶ Play"** sáng lên (màu xanh), bấm vào đó.
+    *   Thông báo hiện ra: "URL Copied to Clipboard".
+    *   Mở **VLC Player** -> Menu **Media** -> **Open Network Stream** (Ctrl+N).
+    *   Dán link (Ctrl+V) và bấm Play.
+    *   *Kết quả:* Video chạy ngay lập tức. -> **Thành công tính năng Portable Streaming.**
+3.  **Chuẩn bị Seeding:**
+    *   Để Client A tải được khoảng **30-50%** rồi tạm dừng hoặc để chạy tiếp. Lúc này Client A đã có dữ liệu để chia sẻ cho người khác.
+
+### Giai đoạn 3: Demo P2P Multi-Source (Trên Máy 2)
+
+1.  **Chạy Client B (Guest):**
+    *   Chạy class `MainApp` trên Máy 2.
+2.  **Bắt đầu tải:**
+    *   Chọn **cùng file** mà Máy 1 đang tải. Bấm **Download**.
+3.  **Quan sát & Giải thích:**
+    *   Nhìn vào thanh tiến độ (Progress Bar) của Client B.
+    *   Chỉ cho người xem thấy các thanh màu nhỏ bên dưới:
+        *   **Màu Xanh (Origin):** Đang tải từ Server Máy 1.
+        *   **Màu Tím/Khác (Peer):** Đang tải từ Client A (Máy 1).
+    *   *Điểm nhấn:* "Mọi người thấy không, Client B đang tải từ 2 nguồn cùng lúc. Tốc độ nhanh hơn hẳn so với tải đơn lẻ."
+
+### Giai đoạn 4: Demo Tự Phục Hồi (Nâng cao - Tùy chọn)
+
+1.  Khi Máy 2 đang tải, hãy thử **Tắt Origin Server** trên Máy 1 (Stop process).
+2.  Quan sát Máy 2:
+    *   Tốc độ từ Origin về 0.
+    *   Nhưng quá trình tải **KHÔNG DỪNG LẠI**. Nó vẫn tiếp tục chạy nhờ dữ liệu từ Client A (P2P).
+    *   -> **Thành công tính năng Reliability.**
+
+---
+
+## 4. Khắc Phục Sự Cố (Troubleshooting)
+
+*   **Lỗi "Connection Refused":**
+    *   Kiểm tra lại IP trong `config.properties`.
+    *   Tắt Tường lửa (Firewall) trên Máy 1 hoặc cho phép Java đi qua Firewall.
+*   **Máy 2 không thấy Máy 1:**
+    *   Đảm bảo 2 máy chung mạng WiFi. Thử ping từ Máy 2 sang Máy 1: `ping 192.168.1.10`.
+*   **Video không chạy:**
+    *   Đảm bảo đã cài VLC. Windows Media Player mặc định có thể không hỗ trợ stream tốt.
+
+**Chúc bạn có buổi Demo thành công!**

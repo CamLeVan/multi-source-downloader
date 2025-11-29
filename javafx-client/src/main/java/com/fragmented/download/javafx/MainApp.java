@@ -217,19 +217,21 @@ public class MainApp extends Application {
             FlowLogger.logStep(step++, "Creating Scheduler", localIP, null);
             Scheduler scheduler = new Scheduler(manifest, downloadClient, errorCallback, 4, pieceStorage, stateStorage, localFilePath, fileId);
 
+            // 10. Create the download task
+            DownloadTask task = new DownloadTask(fileId, scheduler);
+
             // 9. Mount the Virtual Filesystem (only once) - macOS/Linux only
             FlowLogger.logStep(step++, "Mounting Virtual Filesystem", localIP, null);
             mountVFS(fileId, manifest, scheduler, pieceStorage, stateStorage, localFilePath);
 
             // 9.5. Start Local Streaming Server (works on all OS: Windows, macOS, Linux)
             FlowLogger.logStep(step++, "Starting Local Streaming Server", localIP, null);
-            startStreamingServer(fileId, manifest, scheduler, pieceStorage, stateStorage, localFilePath);
+            startStreamingServer(task, fileId, manifest, scheduler, pieceStorage, stateStorage, localFilePath);
 
-            // 10. Create and add the download task to the list
-            DownloadTask task = new DownloadTask(fileId, scheduler);
+            // 11. Add the download task to the list
             downloadTasks.add(task);
             
-            // 11. Setup source tracking callback
+            // 12. Setup source tracking callback
             downloadClient.setSourceTracker((sourceUrl) -> {
                 // Track bytes downloaded from this source
                 String sourceIP = extractIPFromUrl(sourceUrl);
@@ -237,12 +239,12 @@ public class MainApp extends Application {
                 task.trackSourceBytes(sourceUrl, manifest.getPieceSize());
             });
 
-            // 12. Start the download
+            // 13. Start the download
             FlowLogger.logStep(step++, "Starting Download", localIP, null);
             FlowLogger.logSeparator();
             scheduler.start();
 
-            // 13. Periodically refresh peer list (background thread)
+            // 14. Periodically refresh peer list (background thread)
             startPeerRefreshThread(fileId);
 
         } catch (IOException e) {
@@ -478,31 +480,37 @@ public class MainApp extends Application {
      * Start Local HTTP Streaming Server (works on all OS: Windows, macOS, Linux)
      * Cho phép truy cập file đang tải qua HTTP URL
      */
-    private void startStreamingServer(String fileId, ManifestModel manifest, Scheduler scheduler, 
+    private void startStreamingServer(DownloadTask task, String fileId, ManifestModel manifest, Scheduler scheduler, 
                                       PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {
-        if (streamingServer == null) {
-            new Thread(() -> {
-                try {
-                    LocalStreamingServer server = new LocalStreamingServer(
-                        manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
-                    );
-                    this.streamingServer = server;
-                    server.start();
-                    
-                    System.out.println("✅ Local Streaming Server started!");
-                    System.out.println("📺 Streaming URL: " + server.getStreamingUrl());
-                    System.out.println("💡 You can open this URL in:");
-                    System.out.println("   - Video players (VLC, MPV, etc.)");
-                    System.out.println("   - Web browsers (for download)");
-                    System.out.println("   - Any HTTP client");
-                    System.out.println("   - File will be downloaded on-demand when accessed");
-                } catch (Exception e) {
-                    System.err.println("WARNING: Failed to start Local Streaming Server. The application will continue without it.");
-                    System.err.println("Error: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }).start();
-        }
+        new Thread(() -> {
+            try {
+                LocalStreamingServer server = new LocalStreamingServer(
+                    manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
+                );
+                
+                // Store server in task for cleanup
+                task.setStreamingServer(server);
+                
+                server.start();
+                
+                // Update task with streaming URL
+                javafx.application.Platform.runLater(() -> {
+                    task.setStreamingUrl(server.getStreamingUrl());
+                });
+                
+                System.out.println("✅ Local Streaming Server started!");
+                System.out.println("📺 Streaming URL: " + server.getStreamingUrl());
+                System.out.println("💡 You can open this URL in:");
+                System.out.println("   - Video players (VLC, MPV, etc.)");
+                System.out.println("   - Web browsers (for download)");
+                System.out.println("   - Any HTTP client");
+                System.out.println("   - File will be downloaded on-demand when accessed");
+            } catch (Exception e) {
+                System.err.println("WARNING: Failed to start Local Streaming Server. The application will continue without it.");
+                System.err.println("Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     private ManifestModel fetchManifest(String manifestUrl) throws IOException {
@@ -549,10 +557,16 @@ public class MainApp extends Application {
         } catch (Throwable e) {
             System.err.println("Error while unmounting VFS: " + e.getMessage());
         }
-        System.out.println("Stopping streaming server...");
-        if (streamingServer != null) {
-            streamingServer.close();
+        System.out.println("Stopping streaming servers...");
+        
+        // Close all streaming servers
+        for (DownloadTask task : downloadTasks) {
+            Object serverObj = task.getStreamingServer();
+            if (serverObj instanceof LocalStreamingServer) {
+                ((LocalStreamingServer) serverObj).close();
+            }
         }
+        
         System.out.println("Shutting down application...");
         if (peerServer != null) {
             peerServer.close();

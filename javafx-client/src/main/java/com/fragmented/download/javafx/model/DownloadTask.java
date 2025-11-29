@@ -18,7 +18,9 @@ public class DownloadTask {
     private final StringProperty fileName = new SimpleStringProperty();
     private final DoubleProperty progress = new SimpleDoubleProperty();
     private final StringProperty status = new SimpleStringProperty();
+    private final StringProperty streamingUrl = new SimpleStringProperty(); // Tuần 6: Streaming URL
     private final Scheduler scheduler;
+    private Object streamingServer; // Store as Object to avoid dependency cycle if not needed, or better import it.
     private final ObservableList<SourceProgress> sourceProgresses = FXCollections.observableArrayList();
 
     public DownloadTask(String fileName, Scheduler scheduler) {
@@ -55,6 +57,26 @@ public class DownloadTask {
 
     public StringProperty statusProperty() {
         return status;
+    }
+
+    public String getStreamingUrl() {
+        return streamingUrl.get();
+    }
+
+    public StringProperty streamingUrlProperty() {
+        return streamingUrl;
+    }
+
+    public void setStreamingUrl(String url) {
+        this.streamingUrl.set(url);
+    }
+
+    public void setStreamingServer(Object server) {
+        this.streamingServer = server;
+    }
+
+    public Object getStreamingServer() {
+        return streamingServer;
     }
 
     public Scheduler getScheduler() {
