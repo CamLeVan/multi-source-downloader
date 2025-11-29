@@ -59,6 +59,12 @@ public class DownloadCellController extends ListCell<DownloadTask> {
     
     @FXML
     private Label peerLabel;
+    
+    @FXML
+    private Label detailsLabel;
+    
+    @FXML
+    private Label progressLabel;
 
     private FXMLLoader fxmlLoader;
     private static final DecimalFormat BYTES_FORMAT = new DecimalFormat("#,##0.00");
@@ -105,8 +111,35 @@ public class DownloadCellController extends ListCell<DownloadTask> {
             progressBar.progressProperty().bind(task.progressProperty());
             statusLabel.textProperty().bind(task.statusProperty());
             
+            if (detailsLabel != null) {
+                detailsLabel.textProperty().bind(task.detailsProperty());
+            }
+            
+            if (progressLabel != null) {
+                progressLabel.textProperty().bind(
+                    Bindings.createStringBinding(
+                        () -> String.format("%.1f%%", task.getProgress() * 100),
+                        task.progressProperty()
+                    )
+                );
+            }
+            
             if (playButton != null) {
-                playButton.disableProperty().bind(task.streamingUrlProperty().isEmpty());
+                // Smart Action Button Logic
+                FileType type = detectFileType(task.getFileName());
+                playButton.getStyleClass().removeAll("play-button", "open-folder-button", "preview-button");
+                
+                if (type == FileType.VIDEO || type == FileType.AUDIO) {
+                    playButton.setText("▶ Play");
+                    playButton.getStyleClass().add("play-button");
+                    playButton.disableProperty().bind(task.streamingUrlProperty().isEmpty());
+                } else {
+                    playButton.setText("📂 Open");
+                    playButton.getStyleClass().add("open-folder-button");
+                    // Always enable "Open Folder" as the folder exists
+                    playButton.disableProperty().unbind();
+                    playButton.setDisable(false);
+                }
             }
             
             // Bind per-source progress bars
@@ -254,21 +287,74 @@ public class DownloadCellController extends ListCell<DownloadTask> {
 
     @FXML
     private void handlePlay() {
-        String url = getItem().getStreamingUrl();
-        if (url != null && !url.isEmpty()) {
-            // Copy to clipboard
-            javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
-            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-            content.putString(url);
-            clipboard.setContent(content);
-            
-            // Show alert
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-            alert.setTitle("Streaming URL");
-            alert.setHeaderText("URL Copied to Clipboard!");
-            alert.setContentText("You can paste this URL into VLC or any video player:\n\n" + url);
-            alert.showAndWait();
+        DownloadTask task = getItem();
+        if (task == null) return;
+        
+        FileType type = detectFileType(task.getFileName());
+        
+        if (type == FileType.VIDEO || type == FileType.AUDIO) {
+            // Streaming Logic
+            String url = task.getStreamingUrl();
+            if (url != null && !url.isEmpty()) {
+                // Copy to clipboard
+                javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+                javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+                content.putString(url);
+                clipboard.setContent(content);
+                
+                // Show alert
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                alert.setTitle("Streaming URL");
+                alert.setHeaderText("URL Copied to Clipboard!");
+                alert.setContentText("You can paste this URL into VLC or any video player:\n\n" + url);
+                alert.showAndWait();
+            }
+        } else {
+            // Open Folder Logic
+            try {
+                String path = task.getScheduler().getLocalFilePath();
+                java.io.File file = new java.io.File(path);
+                java.io.File parent = file.getParentFile();
+                
+                if (parent != null && parent.exists()) {
+                    java.awt.Desktop.getDesktop().open(parent);
+                } else {
+                    // Fallback if parent doesn't exist (unlikely)
+                    System.err.println("Parent folder does not exist: " + path);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                // Show error alert
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText("Cannot Open Folder");
+                alert.setContentText("Failed to open folder: " + e.getMessage());
+                alert.showAndWait();
+            }
         }
+    }
+
+    private enum FileType {
+        VIDEO, AUDIO, ARCHIVE, EXECUTABLE, IMAGE, DOCUMENT, OTHER
+    }
+
+    private FileType detectFileType(String fileName) {
+        if (fileName == null) return FileType.OTHER;
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi") || lower.endsWith(".mov") || lower.endsWith(".webm")) {
+            return FileType.VIDEO;
+        } else if (lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".flac") || lower.endsWith(".aac")) {
+            return FileType.AUDIO;
+        } else if (lower.endsWith(".zip") || lower.endsWith(".rar") || lower.endsWith(".7z") || lower.endsWith(".tar") || lower.endsWith(".gz")) {
+            return FileType.ARCHIVE;
+        } else if (lower.endsWith(".exe") || lower.endsWith(".msi") || lower.endsWith(".bat") || lower.endsWith(".sh")) {
+            return FileType.EXECUTABLE;
+        } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".gif") || lower.endsWith(".bmp")) {
+            return FileType.IMAGE;
+        } else if (lower.endsWith(".pdf") || lower.endsWith(".doc") || lower.endsWith(".docx") || lower.endsWith(".txt")) {
+            return FileType.DOCUMENT;
+        }
+        return FileType.OTHER;
     }
 }
 

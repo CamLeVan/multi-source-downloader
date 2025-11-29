@@ -1,3 +1,4 @@
+
 /* Tuần 2: CSS Gradient Styling cho Progress Bars */
 
 /* Dashboard Container */
@@ -198,3 +199,33 @@
     -fx-border-radius: 10px;
 }
 
+/* Smart Action Buttons */
+.play-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+.play-button:hover {
+    -fx-background-color: #45a049;
+}
+
+.open-folder-button {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+.open-folder-button:hover {
+    -fx-background-color: #1976D2;
+}
+
+.preview-button {
+    -fx-background-color: #FF9800;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+.preview-button:hover {
+    -fx-background-color: #F57C00;
+}

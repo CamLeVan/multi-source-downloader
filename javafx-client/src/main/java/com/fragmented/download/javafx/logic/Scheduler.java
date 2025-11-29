@@ -277,4 +277,11 @@ public class Scheduler {
             return "unknown";
         }
     }
+    public String getLocalFilePath() {
+        return localFilePath;
+    }
+
+    public ManifestModel getManifest() {
+        return manifest;
+    }
 }
