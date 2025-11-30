@@ -1,13 +1,8 @@
 # Multi-Source Downloader
 
-Hệ thống tải file phân mảnh (fragmented download) với hỗ trợ đa nguồn, P2P sharing, và Virtual Filesystem.
+Hệ thống tải file phân mảnh (fragmented download) với hỗ trợ đa nguồn, P2P sharing
 
-## 🚀 Bắt Đầu Nhanh
 
-**👉 Xem `START_HERE.md` để chọn scenario demo phù hợp!**
-
-- **Demo 2 Máy:** `SETUP_TWO_MACHINES.md`
-- **Demo 4 Máy (2 Host + 2 VM):** `SETUP_4_MACHINES.md` ⭐ Khuyến nghị
 
 ## 🎯 Tính năng chính
 
@@ -314,4 +309,5 @@ brew install macfuse
 - P2P tracker integration
 - VirtualFS implementation
 - UI với progress tracking per-source
+
 
