@@ -281,7 +281,9 @@ public class Scheduler {
         return localFilePath;
     }
 
-    public ManifestModel getManifest() {
-        return manifest;
+
+
+    public long getDownloadedBytes() {
+        return downloadedBytes.get();
     }
 }
