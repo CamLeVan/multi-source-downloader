@@ -43,3 +43,9 @@ keystore.p12
 *.bak
 *.swp
 *~
+
+# Video files (Too large)
+*.mp4
+*.mkv
+**/files/
+**/download/

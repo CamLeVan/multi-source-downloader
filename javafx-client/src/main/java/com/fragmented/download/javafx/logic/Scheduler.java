@@ -18,9 +18,11 @@ import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
 
 /**
- * Manages the queue of pieces to be downloaded, orchestrates the download process,
+ * Manages the queue of pieces to be downloaded, orchestrates the download
+ * process,
  * and resumes downloads from a previously saved state.
- * Tuần 6: Added state management (IDLE, RUNNING, PAUSED, FINISHED) for pause/resume support
+ * Tuần 6: Added state management (IDLE, RUNNING, PAUSED, FINISHED) for
+ * pause/resume support
  */
 public class Scheduler {
 
@@ -47,8 +49,10 @@ public class Scheduler {
     private volatile SchedulerState state = SchedulerState.IDLE; // Tuần 6: State tracking
     private final AtomicLong downloadedBytes = new AtomicLong(0);
 
-    public Scheduler(ManifestModel manifest, DownloadClient downloadClient, ErrorCallback errorCallback, int numberOfWorkers,
-                     PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath, String fileId) throws IOException {
+    public Scheduler(ManifestModel manifest, DownloadClient downloadClient, ErrorCallback errorCallback,
+            int numberOfWorkers,
+            PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath, String fileId)
+            throws IOException {
         this.manifest = manifest;
         this.downloadClient = downloadClient;
         this.errorCallback = errorCallback;
@@ -67,7 +71,8 @@ public class Scheduler {
         }
 
         // Initialize downloaded bytes based on the loaded state
-        // Note: This is an approximation; it doesn't account for the last piece being smaller.
+        // Note: This is an approximation; it doesn't account for the last piece being
+        // smaller.
         // A more accurate way would be to sum the actual sizes of completed pieces.
         long completedPieceCount = this.downloadState.getCompletedPieceCount();
         this.downloadedBytes.set(completedPieceCount * manifest.getPieceSize());
@@ -77,13 +82,15 @@ public class Scheduler {
                 .filter(p -> !this.downloadState.isPieceCompleted(p.getId()))
                 .collect(Collectors.toCollection(ConcurrentLinkedQueue::new));
 
-        // Tuần 6: Don't initialize workerExecutor in constructor (will be created in start())
+        // Tuần 6: Don't initialize workerExecutor in constructor (will be created in
+        // start())
         this.workerExecutor = null;
     }
 
     private void run() {
         System.out.println("Scheduler started for file of size: " + manifest.getFileSize());
-        System.out.println("Total pieces to download: " + pieceQueue.size() + " (already completed: " + downloadState.getCompletedPieceCount() + ")");
+        System.out.println("Total pieces to download: " + pieceQueue.size() + " (already completed: "
+                + downloadState.getCompletedPieceCount() + ")");
 
         if (pieceQueue.isEmpty()) {
             System.out.println("Download is already complete.");
@@ -113,32 +120,41 @@ public class Scheduler {
                 while (state == SchedulerState.RUNNING && !pieceQueue.isEmpty()) {
                     PieceModel piece = pieceQueue.poll();
                     if (piece != null) {
-                        String sourceIP = piece.getSources() != null && !piece.getSources().isEmpty() 
-                            ? extractIPFromUrl(piece.getSources().get(0)) : "unknown";
-                        System.out.println(String.format("[%s] [DOWNLOAD] Worker %s downloading piece %d | Sources: %d | First source: %s", 
-                            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                            Thread.currentThread().getName(), piece.getId(), 
-                            piece.getSources() != null ? piece.getSources().size() : 0,
-                            sourceIP));
-                        
+                        String sourceIP = piece.getSources() != null && !piece.getSources().isEmpty()
+                                ? extractIPFromUrl(piece.getSources().get(0))
+                                : "unknown";
+                        System.out.println(String.format(
+                                "[%s] [DOWNLOAD] Worker %s downloading piece %d | Sources: %d | First source: %s",
+                                java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                                Thread.currentThread().getName(), piece.getId(),
+                                piece.getSources() != null ? piece.getSources().size() : 0,
+                                sourceIP));
+
                         // Retry callback for hash mismatch
                         Consumer<PieceModel> retryCallback = (retryPiece) -> {
                             // Đưa piece trở lại queue với sources đã bỏ source đầu tiên
-                            System.out.println(String.format("[%s] [RETRY] Re-queuing piece %d with %d remaining sources", 
-                                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                                retryPiece.getId(), retryPiece.getSources().size()));
+                            System.out
+                                    .println(String.format("[%s] [RETRY] Re-queuing piece %d with %d remaining sources",
+                                            java.time.LocalDateTime.now().format(
+                                                    java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                                            retryPiece.getId(), retryPiece.getSources().size()));
                             pieceQueue.offer(retryPiece);
                         };
-                        
+
                         worker.download(piece, (data) -> {
                             long totalDownloaded = downloadedBytes.addAndGet(data.length);
-                            String downloadedFrom = piece.getSources() != null && !piece.getSources().isEmpty() 
-                                ? extractIPFromUrl(piece.getSources().get(0)) : "unknown";
-                            System.out.println(String.format("[%s] [DOWNLOAD] ✓ Piece %d completed | FROM: %s | Size: %d KB | Total: %d MB", 
-                                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                                piece.getId(), downloadedFrom, data.length / 1024, totalDownloaded / 1024 / 1024));
-                            
-                            // Track source progress (source đã được track trong SourceTrackingDownloadClient)
+                            String downloadedFrom = piece.getSources() != null && !piece.getSources().isEmpty()
+                                    ? extractIPFromUrl(piece.getSources().get(0))
+                                    : "unknown";
+                            System.out.println(String.format(
+                                    "[%s] [DOWNLOAD] ✓ Piece %d completed | FROM: %s | Size: %d KB | Total: %d MB",
+                                    java.time.LocalDateTime.now()
+                                            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                                    piece.getId(), downloadedFrom, data.length / 1024, totalDownloaded / 1024 / 1024));
+
+                            // Track source progress (source đã được track trong
+                            // SourceTrackingDownloadClient)
                             // Bytes sẽ được track trong DownloadTask khi piece download thành công
                         }, retryCallback);
                     }
@@ -159,7 +175,8 @@ public class Scheduler {
         if (state == SchedulerState.RUNNING) {
             System.out.println("Pausing scheduler...");
             state = SchedulerState.PAUSED;
-            // This will stop workers from picking up new tasks because the loop condition will fail.
+            // This will stop workers from picking up new tasks because the loop condition
+            // will fail.
             // It allows currently downloading pieces to finish.
             workerExecutor.shutdown(); // Does not accept new tasks.
             System.out.println("Scheduler paused. Workers will stop after finishing current piece.");
@@ -179,14 +196,16 @@ public class Scheduler {
 
     /**
      * Tuần 6: Get the unique identifier for the file being downloaded.
+     * 
      * @return The file ID
      */
     public String getFileId() {
         return fileId;
     }
-    
+
     /**
      * Get the manifest model for this download
+     * 
      * @return The manifest model
      */
     public ManifestModel getManifest() {
@@ -205,7 +224,8 @@ public class Scheduler {
 
     /**
      * Tuần 4: Download a specific piece on-demand (for VirtualFS)
-     * This is called when VirtualFS detects a piece is needed but not yet downloaded
+     * This is called when VirtualFS detects a piece is needed but not yet
+     * downloaded
      * 
      * @param pieceId The ID of the piece to download
      */
@@ -224,25 +244,31 @@ public class Scheduler {
         }
 
         PieceModel piece = manifest.getPieces().get(pieceId);
-        
+
         // Create a worker and download immediately (blocking for VirtualFS)
-        DownloadWorker worker = new DownloadWorker(downloadClient, errorCallback, pieceStorage, 
-                                                   stateStorage, localFilePath, fileId, 
-                                                   manifest.getPieceSize(), downloadState);
-        
+        DownloadWorker worker = new DownloadWorker(downloadClient, errorCallback, pieceStorage,
+                stateStorage, localFilePath, fileId,
+                manifest.getPieceSize(), downloadState);
+
         // Submit and wait for completion (blocking call for on-demand access)
         try {
             java.util.concurrent.CompletableFuture<Void> future = new java.util.concurrent.CompletableFuture<>();
-            
+
+            long startTime = System.currentTimeMillis();
+            System.out.println("Scheduler: Starting on-demand download for Piece " + pieceId);
+
             worker.download(piece, (data) -> {
                 long totalDownloaded = downloadedBytes.addAndGet(data.length);
-                System.out.println("On-demand downloaded piece " + pieceId + ". Total: " + totalDownloaded);
+                long duration = System.currentTimeMillis() - startTime;
+                System.out.println(
+                        "On-demand downloaded piece " + pieceId + " in " + duration + "ms. Total: " + totalDownloaded);
                 future.complete(null);
             });
-            
-            // Wait for download to complete (with timeout - tăng lên 60s cho file lớn)
-            future.get(60, java.util.concurrent.TimeUnit.SECONDS);
-            
+
+            // Wait for download to complete (with timeout - reduced for better
+            // responsiveness)
+            future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+
         } catch (java.util.concurrent.TimeoutException e) {
             System.err.println("Timeout downloading piece " + pieceId + " on-demand");
         } catch (java.util.concurrent.ExecutionException e) {
@@ -256,7 +282,7 @@ public class Scheduler {
     public void shutdown() {
         workerExecutor.shutdownNow(); // Use shutdownNow to interrupt workers immediately
     }
-    
+
     private String extractIPFromUrl(String url) {
         try {
             if (url.startsWith("http://")) {
@@ -277,11 +303,16 @@ public class Scheduler {
             return "unknown";
         }
     }
+
     public String getLocalFilePath() {
         return localFilePath;
     }
 
-    public ManifestModel getManifest() {
-        return manifest;
+    public long getDownloadedBytes() {
+        return downloadedBytes.get();
+    }
+
+    public boolean isPieceCompleted(int pieceId) {
+        return downloadState.isPieceCompleted(pieceId);
     }
 }

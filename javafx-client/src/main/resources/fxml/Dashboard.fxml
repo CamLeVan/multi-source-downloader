@@ -3,69 +3,90 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.media.MediaView?>
+<?import javafx.scene.text.Text?>
 
-<!-- Dashboard với Download Manager UI -->
+<!-- Dashboard với Giao diện Split View (List bên trái, Player bên phải) -->
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.fragmented.download.javafx.controller.DashboardController"
-      spacing="15.0" styleClass="dashboard">
+      spacing="0" styleClass="dashboard" stylesheets="@../styles/dashboard.css"
+      prefWidth="1000" prefHeight="700">
 
-    <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
-    </padding>
-
-    <!-- Title -->
-    <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="Multi-Source Download Manager" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-        <Button fx:id="refreshButton" text="Refresh" onAction="#onRefreshFiles" style="-fx-padding: 5px 15px;"/>
+    <!-- Header -->
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #2c3e50; -fx-padding: 15;">
+        <Label text="🚀 BitStorm Downloader" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="statusLabel" text="System Ready" style="-fx-text-fill: #ecf0f1; -fx-font-size: 13px;"/>
+        <Button fx:id="refreshButton" text="🔄 Refresh Files" onAction="#onRefreshFiles" 
+                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand;"/>
     </HBox>
 
-    <!-- Phase 2: Search and Filter Section -->
-    <VBox spacing="10.0" style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 15;">
-        <HBox spacing="10.0" alignment="CENTER_LEFT">
-            <Label text="🔍" style="-fx-font-size: 16px;"/>
-            <TextField fx:id="searchField" promptText="Search files..." prefWidth="400.0" HBox.hgrow="ALWAYS" onKeyReleased="#onSearchTextChanged"/>
-            <ComboBox fx:id="sortComboBox" promptText="Sort by..." prefWidth="150.0"/>
-        </HBox>
-        <HBox spacing="10.0" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
-            <Button fx:id="filterAllButton" text="All" onAction="#onFilterCategory" styleClass="category-filter-button"/>
-            <Button fx:id="filterArchiveButton" text="Archive" onAction="#onFilterCategory" styleClass="category-filter-button"/>
-            <Button fx:id="filterApplicationButton" text="Application" onAction="#onFilterCategory" styleClass="category-filter-button"/>
-            <Button fx:id="filterDocumentButton" text="Document" onAction="#onFilterCategory" styleClass="category-filter-button"/>
-            <Button fx:id="filterVideoButton" text="Video" onAction="#onFilterCategory" styleClass="category-filter-button"/>
-            <Button fx:id="filterImageButton" text="Image" onAction="#onFilterCategory" styleClass="category-filter-button"/>
-        </HBox>
-    </VBox>
+    <!-- Main Split Content -->
+    <SplitPane dividerPositions="0.6" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+        
+        <!-- LEFT PANEL: Danh sách file & Download -->
+        <VBox spacing="15" style="-fx-padding: 15;">
+            
+            <!-- Search Bar -->
+            <VBox spacing="8">
+                <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: white; -fx-background-radius: 5; -fx-padding: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 1);">
+                    <Label text="🔍" style="-fx-font-size: 16px;"/>
+                    <TextField fx:id="searchField" promptText="Search files..." HBox.hgrow="ALWAYS" 
+                             style="-fx-background-color: transparent; -fx-prompt-text-fill: derive(-fx-control-inner-background, -30%);"/>
+                </HBox>
+                
+                <!-- Filter Chips -->
+                <HBox spacing="8">
+                     <Button fx:id="filterAllButton" text="All" onAction="#onFilterCategory" styleClass="filter-chip"/>
+                     <Button fx:id="filterVideoButton" text="Video" onAction="#onFilterCategory" styleClass="filter-chip"/>
+                     <Button fx:id="filterArchiveButton" text="Archives" onAction="#onFilterCategory" styleClass="filter-chip"/>
+                </HBox>
+            </VBox>
 
-    <!-- Phase 1.7: File List Section với Card Layout -->
-    <VBox spacing="10.0" VBox.vgrow="ALWAYS">
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <Label text="Available Files:" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
-            <Label fx:id="fileCountLabel" text="(0 files)" style="-fx-font-size: 12px; -fx-text-fill: #666666;"/>
-        </HBox>
-        <ListView fx:id="fileListView" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
-            <!-- Generic type sẽ được set trong controller -->
-        </ListView>
-    </VBox>
+            <!-- File List -->
+            <VBox spacing="5" VBox.vgrow="ALWAYS">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="Available Files" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="fileCountLabel" text="(0)" style="-fx-text-fill: gray;"/>
+                </HBox>
+                <ListView fx:id="fileListView" VBox.vgrow="ALWAYS" styleClass="modern-list-view"/>
+            </VBox>
 
-    <!-- Legacy: TextField để nhập custom file name (backward compatibility) -->
-    <VBox spacing="10.0" style="-fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 15;">
-        <Label text="Or Enter Custom File Name:" style="-fx-font-weight: bold;"/>
-        <HBox spacing="10.0" alignment="CENTER_LEFT">
-            <TextField fx:id="fileNameField" promptText="e.g., 100MB.zip" prefWidth="300.0" HBox.hgrow="ALWAYS"/>
-            <Button fx:id="addDownloadButton" text="Add Download" onAction="#onAddDownload" 
-                    style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10px 30px;"/>
-        </HBox>
-    </VBox>
 
-    <!-- Downloads Queue Section -->
-    <VBox spacing="5.0" VBox.vgrow="ALWAYS">
-        <Label text="Download Queue:" style="-fx-font-weight: bold;"/>
-        <ListView fx:id="downloadListView" prefHeight="300.0" VBox.vgrow="ALWAYS"/>
-    </VBox>
+        </VBox>
 
-    <!-- Status Bar -->
-    <HBox spacing="10.0" style="-fx-background-color: #f5f5f5; -fx-padding: 10;">
-        <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px;"/>
-    </HBox>
+        <!-- RIGHT PANEL: Media Player Preview -->
+        <VBox spacing="0" alignment="TOP_CENTER" style="-fx-background-color: #1a1a1a;">
+            
+            <!-- Player Area -->
+            <StackPane VBox.vgrow="ALWAYS" style="-fx-background-color: black;">
+                <MediaView fx:id="mediaPlayerView" preserveRatio="true" fitWidth="450"/>
+                
+                <!-- Placeholder overlay when no video is playing -->
+                <VBox fx:id="playerPlaceholder" alignment="CENTER" spacing="10">
+                    <Label text="🎬" style="-fx-font-size: 48px; -fx-text-fill: #555;"/>
+                    <Label text="PREVIEW PLAYER" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #555;"/>
+                    <Label text="Select a video to start streaming" style="-fx-text-fill: #444;"/>
+                </VBox>
+            </StackPane>
 
+            <!-- Player Controls (Static for Demo) -->
+            <HBox spacing="10" alignment="CENTER" style="-fx-padding: 15; -fx-background-color: #222;">
+                <Label fx:id="nowPlayingLabel" text="No media selected" style="-fx-text-fill: #aaa; -fx-font-style: italic;"/>
+            </HBox>
+            
+            <!-- Info Panel / Progress Bar -->
+            <VBox fx:id="downloadProgressContainer" spacing="10" style="-fx-padding: 20;">
+                 <Label text="Download Progress" style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;"/>
+                 <ProgressBar fx:id="videoProgressBar" progress="0.0" prefWidth="1000" style="-fx-accent: #3498db;"/>
+                 <HBox alignment="CENTER_LEFT">
+                    <Label fx:id="videoProgressLabel" text="0%" style="-fx-text-fill: #ecf0f1;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="videoSpeedLabel" text="0 KB/s" style="-fx-text-fill: #95a5a6; -fx-font-size: 11px;"/>
+                 </HBox>
+            </VBox>
+        </VBox>
+
+    </SplitPane>
 </VBox>

@@ -52,15 +52,16 @@ import okhttp3.ResponseBody;
 public class MainApp extends Application {
 
     private static final String VFS_MOUNT_DIR = "downloader-vfs";
-    
+
     // Load config từ file
     private static final String TRACKER_URL = ConfigManager.get("tracker.url", "http://localhost:8081");
     private static final String ORIGIN_SERVER_URL = ConfigManager.get("origin.server.url", "https://localhost:8443");
     private static final String CLIENT_NAME = ConfigManager.get("client.name", "Client-1");
-    private static final String MANIFEST_URL = ORIGIN_SERVER_URL + "/manifest/100MB.zip";
-    
+    private static final String MANIFEST_URL = ORIGIN_SERVER_URL + "/manifest/demo.mp4";
+
     private final OkHttpClient httpClient = new OkHttpClient();
-    private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList(); // Tuần 6: Multi-download
+    private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList(); // Tuần 6:
+                                                                                                    // Multi-download
     private PeerServer peerServer;
     private VirtualDownloaderFS vfs;
     private LocalStreamingServer streamingServer; // HTTP streaming server (works on all OS)
@@ -68,24 +69,29 @@ public class MainApp extends Application {
     private final String peerId = UUID.randomUUID().toString(); // Unique peer ID
     private String localIP;
     private int peerPort;
-    
+
     // Error callback để UI có thể hiển thị error message
     private java.util.function.Consumer<String> downloadErrorCallback;
+    private DashboardController dashboardController;
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        // Get local IP address
-        localIP = NetworkUtil.getLocalIPAddress();
+        // Ưu tiên lấy IP từ Config (client.bind.address) thay vì tự dò
+        String bindIP = ConfigManager.get("client.bind.address", "");
+        if (bindIP != null && !bindIP.isEmpty()) {
+            localIP = bindIP; // Dùng IP do user chỉ định (Chính xác 100%)
+        } else {
+            localIP = NetworkUtil.getLocalIPAddress(); // Fallback
+        }
+
         String hostname = NetworkUtil.getHostname();
-        
+
         FlowLogger.logSection("CLIENT INITIALIZATION");
         FlowLogger.logInfo("Client Name: " + CLIENT_NAME, localIP);
-        FlowLogger.logInfo("Hostname: " + hostname, localIP);
-        FlowLogger.logInfo("Local IP Address: " + localIP, localIP);
-        FlowLogger.logInfo("Tracker URL: " + TRACKER_URL, localIP);
-        FlowLogger.logInfo("Origin Server URL: " + ORIGIN_SERVER_URL, localIP);
+        FlowLogger.logInfo("Listening IP (Correct): " + localIP, localIP); // Log rõ ràng đây là IP chính
+        FlowLogger.logInfo("Tracker: " + TRACKER_URL, localIP);
         FlowLogger.logSeparator();
-        
+
         // Tuần 6: Set up the UI first
         URL fxmlLocation = getClass().getResource("/fxml/Dashboard.fxml");
         if (fxmlLocation == null) {
@@ -94,38 +100,23 @@ public class MainApp extends Application {
 
         FXMLLoader loader = new FXMLLoader(fxmlLocation);
         Parent root = loader.load();
-        
+
         DashboardController controller = loader.getController();
+        this.dashboardController = controller;
         controller.setMainApp(this);
         controller.setDownloadTasks(downloadTasks);
-        
-        // Setup error callback để UI có thể hiển thị error
+
         setDownloadErrorCallback((errorMsg) -> {
             controller.showError(errorMsg);
         });
 
-        // Load CSS stylesheet
         Scene scene = new Scene(root, 900, 700);
         String cssPath = getClass().getResource("/styles/dashboard.css").toExternalForm();
         scene.getStylesheets().add(cssPath);
-        
-        primaryStage.setTitle("Multi-Source Downloader - " + CLIENT_NAME + " (" + localIP + ")");
+
+        primaryStage.setTitle("Multi-Source Downloader - " + CLIENT_NAME);
         primaryStage.setScene(scene);
         primaryStage.show();
-
-        // Auto-download DISABLED - User will select files from UI
-        // User can now choose files from dropdown or enter custom file name
-        // To enable auto-download for testing, uncomment below:
-        /*
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-                startDownload(MANIFEST_URL);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
-        */
     }
 
     /**
@@ -133,21 +124,41 @@ public class MainApp extends Application {
      * Can be called multiple times for multi-download support
      */
     public void startDownload(String manifestUrl) {
-        FlowLogger.logSection("DOWNLOAD FLOW STARTED");
+        FlowLogger.logSection("DOWNLOAD DEMO START"); // Đổi tên cho ngầu
         int step = 1;
-        
+
         try {
             // 1. Fetch the manifest from the server
-            FlowLogger.logStep(step++, "Fetching manifest", localIP, 0, extractIPFromUrl(ORIGIN_SERVER_URL), 8443);
+            // FlowLogger.logStep(step++, "Fetching manifest", localIP, 0,
+            // extractIPFromUrl(ORIGIN_SERVER_URL), 8443); // Bỏ bớt log rườm rà
             ManifestModel manifest = fetchManifest(manifestUrl);
-            
+
             // Fix: Replace localhost in manifest sources with actual Origin Server IP
-            String originServerIP = extractIPFromUrl(ORIGIN_SERVER_URL);
-            String originServerBaseUrl = ORIGIN_SERVER_URL.replace("https://", "http://").replace(":8443", ":8080");
-            fixManifestSources(manifest, originServerBaseUrl);
-            
-            FlowLogger.logInfo("Manifest received: " + manifest.getPieces().size() + " pieces, " + 
-                (manifest.getFileSize() / 1024 / 1024) + " MB", localIP);
+            String originServerHost = extractIPFromUrl(ORIGIN_SERVER_URL);
+            String originServerUrl = "http://" + originServerHost + ":8080";
+
+            // Fix manifest silently (LOG GỌN: Chỉ báo tổng số)
+            int fixedCount = 0;
+            for (PieceModel piece : manifest.getPieces()) {
+                List<String> fixedSources = new ArrayList<>();
+                for (String source : piece.getSources()) {
+                    if (source.contains("localhost:8080") || source.contains("127.0.0.1:8080")) {
+                        String fixedSource = source.replace("http://localhost:8080", originServerUrl)
+                                .replace("http://127.0.0.1:8080", originServerUrl);
+                        fixedSources.add(fixedSource);
+                        fixedCount++;
+                    } else {
+                        fixedSources.add(source);
+                    }
+                }
+                piece.setSources(fixedSources);
+            }
+            if (fixedCount > 0) {
+                System.out.println(
+                        "[INFO] Auto-fixed " + fixedCount + " sources to point to Origin IP: " + originServerHost);
+            }
+
+            FlowLogger.logInfo("Manifest Loaded: " + manifest.getPieces().size() + " pieces", localIP);
 
             // 2. Define file identifiers and paths
             String fileId = manifestUrl.substring(manifestUrl.lastIndexOf('/') + 1);
@@ -156,7 +167,8 @@ public class MainApp extends Application {
 
             // 3. Initialize TrackerClient (only once)
             if (trackerClient == null) {
-                FlowLogger.logStep(step++, "Initializing Tracker Client", localIP, 0, extractIPFromUrl(TRACKER_URL), 8081);
+                FlowLogger.logStep(step++, "Initializing Tracker Client", localIP, 0, extractIPFromUrl(TRACKER_URL),
+                        8081);
                 trackerClient = new TrackerClient(httpClient, TRACKER_URL);
             }
 
@@ -165,7 +177,8 @@ public class MainApp extends Application {
             IStateStorage stateStorage = new JsonStateStorage();
             PieceStorage pieceStorage = new SparseFileStorage();
 
-            // Reset state nếu lần trước download đã hoàn tất nhưng người dùng yêu cầu tải lại
+            // Reset state nếu lần trước download đã hoàn tất nhưng người dùng yêu cầu tải
+            // lại
             handleExistingDownloadState(manifest, stateStorage, fileId, localFilePath);
 
             // Ensure the target file is created (as a sparse file)
@@ -178,16 +191,18 @@ public class MainApp extends Application {
                     FlowLogger.logStep(step++, "Starting Peer Server", localIP, null);
                     peerServer = new PeerServer(stateStorage, pieceStorage, manifest, fileId, localFilePath);
                     peerServer.start();
-                    
+
                     peerPort = peerServer.getActualPort();
                     FlowLogger.logInfo("Peer Server started on " + localIP + ":" + peerPort, localIP);
-                    
+
                     // Announce với tracker sau khi PeerServer đã start
                     String[] peerParts = (localIP + ":" + peerPort).split(":");
-                    FlowLogger.logStep(step++, "Announcing to Tracker", peerParts[0], Integer.parseInt(peerParts[1]), extractIPFromUrl(TRACKER_URL), 8081);
+                    FlowLogger.logStep(step++, "Announcing to Tracker", peerParts[0], Integer.parseInt(peerParts[1]),
+                            extractIPFromUrl(TRACKER_URL), 8081);
                     boolean announced = trackerClient.announce(fileId, peerId, peerPort);
                     if (announced) {
-                        FlowLogger.logInfo("Successfully announced to tracker: fileId=" + fileId + ", peer=" + localIP + ":" + peerPort, localIP);
+                        FlowLogger.logInfo("Successfully announced to tracker: fileId=" + fileId + ", peer=" + localIP
+                                + ":" + peerPort, localIP);
                     } else {
                         FlowLogger.logError("Failed to announce to tracker", localIP, "Connection failed");
                     }
@@ -199,14 +214,16 @@ public class MainApp extends Application {
             }
 
             // 6. Enrich manifest với peer sources từ tracker
-            FlowLogger.logStep(step++, "Fetching peer list from Tracker", localIP, 0, extractIPFromUrl(TRACKER_URL), 8081);
+            FlowLogger.logStep(step++, "Fetching peer list from Tracker", localIP, 0, extractIPFromUrl(TRACKER_URL),
+                    8081);
             enrichManifestWithPeers(manifest, fileId);
 
             // 7. Set up backend components
             FlowLogger.logStep(step++, "Setting up Download Client", localIP, null);
-            OkHttpDownloadClient okHttpClient = new OkHttpDownloadClient(httpClient, 4, manifest.getPieceSize(), manifest.getFileSize());
+            OkHttpDownloadClient okHttpClient = new OkHttpDownloadClient(httpClient, 4, manifest.getPieceSize(),
+                    manifest.getFileSize());
             SourceTrackingDownloadClient downloadClient = new SourceTrackingDownloadClient(okHttpClient);
-            
+
             ErrorCallback errorCallback = (piece, cause) -> {
                 FlowLogger.logError("Download failed for piece " + piece.getId(), localIP, cause.getMessage());
                 System.err.println("FATAL: Download failed for piece " + piece.getId());
@@ -215,7 +232,8 @@ public class MainApp extends Application {
 
             // 8. Create the scheduler
             FlowLogger.logStep(step++, "Creating Scheduler", localIP, null);
-            Scheduler scheduler = new Scheduler(manifest, downloadClient, errorCallback, 4, pieceStorage, stateStorage, localFilePath, fileId);
+            Scheduler scheduler = new Scheduler(manifest, downloadClient, errorCallback, 4, pieceStorage, stateStorage,
+                    localFilePath, fileId);
 
             // 10. Create the download task
             DownloadTask task = new DownloadTask(fileId, scheduler);
@@ -230,7 +248,7 @@ public class MainApp extends Application {
 
             // 11. Add the download task to the list
             downloadTasks.add(task);
-            
+
             // 12. Setup source tracking callback
             downloadClient.setSourceTracker((sourceUrl) -> {
                 // Track bytes downloaded from this source
@@ -251,7 +269,7 @@ public class MainApp extends Application {
             String errorMsg = "Download failed: " + e.getMessage();
             System.err.println(errorMsg);
             e.printStackTrace();
-            
+
             // Notify UI about error
             if (downloadErrorCallback != null) {
                 javafx.application.Platform.runLater(() -> {
@@ -262,7 +280,7 @@ public class MainApp extends Application {
             String errorMsg = "Unexpected error: " + e.getMessage();
             System.err.println(errorMsg);
             e.printStackTrace();
-            
+
             // Notify UI about error
             if (downloadErrorCallback != null) {
                 javafx.application.Platform.runLater(() -> {
@@ -271,7 +289,7 @@ public class MainApp extends Application {
             }
         }
     }
-    
+
     /**
      * Set error callback để UI có thể hiển thị error message
      */
@@ -285,7 +303,7 @@ public class MainApp extends Application {
     private void fixManifestSources(ManifestModel manifest, String originServerBaseUrl) {
         String originServerHost = extractIPFromUrl(originServerBaseUrl);
         int originServerPort = 8080; // Default port
-        
+
         // Extract port from URL
         try {
             java.net.URL url = new java.net.URL(originServerBaseUrl);
@@ -293,16 +311,16 @@ public class MainApp extends Application {
         } catch (Exception e) {
             // Use default
         }
-        
+
         String originServerUrl = "http://" + originServerHost + ":" + originServerPort;
-        
+
         for (PieceModel piece : manifest.getPieces()) {
             List<String> fixedSources = new ArrayList<>();
             for (String source : piece.getSources()) {
                 // Replace localhost với Origin Server IP thực tế
                 if (source.contains("localhost:8080") || source.contains("127.0.0.1:8080")) {
                     String fixedSource = source.replace("http://localhost:8080", originServerUrl)
-                                             .replace("http://127.0.0.1:8080", originServerUrl);
+                            .replace("http://127.0.0.1:8080", originServerUrl);
                     fixedSources.add(fixedSource);
                     System.out.println("[FIX] Replaced localhost source: " + source + " → " + fixedSource);
                 } else {
@@ -331,12 +349,12 @@ public class MainApp extends Application {
         for (String peer : peers) {
             FlowLogger.logInfo("  - Peer: " + peer, peer.split(":")[0]);
         }
-        
+
         // Thêm peer URLs vào sources của mỗi piece
         int peerCount = 0;
         for (PieceModel piece : manifest.getPieces()) {
             List<String> sources = new ArrayList<>(piece.getSources());
-            
+
             // Thêm peer URLs vào sources (format: http://ip:port/piece/fileId/pieceId)
             for (String peerAddress : peers) {
                 // Tránh thêm chính mình
@@ -346,7 +364,7 @@ public class MainApp extends Application {
                         continue;
                     }
                 }
-                
+
                 // Tạo peer URL cho piece này
                 String peerUrl = "http://" + peerAddress + "/piece/" + fileId + "/" + piece.getId();
                 if (!sources.contains(peerUrl)) {
@@ -354,13 +372,13 @@ public class MainApp extends Application {
                     peerCount++;
                 }
             }
-            
+
             piece.setSources(sources);
         }
-        
+
         FlowLogger.logInfo("Enriched manifest: Added " + peerCount + " peer sources across all pieces", localIP);
     }
-    
+
     /**
      * Extract IP từ URL
      */
@@ -393,7 +411,7 @@ public class MainApp extends Application {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(30000); // Refresh mỗi 30 giây
-                    
+
                     // Re-announce
                     if (peerServer != null && trackerClient != null) {
                         FlowLogger.logInfo("Refreshing peer list and re-announcing", localIP);
@@ -412,11 +430,12 @@ public class MainApp extends Application {
     }
 
     /**
-     * Nếu state lưu trước đó đã hoàn tất (100%) hoặc không còn phù hợp với manifest hiện tại,
+     * Nếu state lưu trước đó đã hoàn tất (100%) hoặc không còn phù hợp với manifest
+     * hiện tại,
      * tự động reset để đảm bảo lần tải mới thật sự thực hiện lại từ đầu.
      */
     private void handleExistingDownloadState(ManifestModel manifest, IStateStorage stateStorage,
-                                             String fileId, String localFilePath) {
+            String fileId, String localFilePath) {
         try {
             DownloadState existingState = stateStorage.loadState(fileId);
             if (existingState == null) {
@@ -445,14 +464,14 @@ public class MainApp extends Application {
         }
     }
 
-    private void mountVFS(String fileId, ManifestModel manifest, Scheduler scheduler, PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {
+    private void mountVFS(String fileId, ManifestModel manifest, Scheduler scheduler, PieceStorage pieceStorage,
+            IStateStorage stateStorage, String localFilePath) {
         if (vfs == null) {
             new Thread(() -> {
                 try {
                     VirtualDownloaderFS virtualDownloaderFS = new VirtualDownloaderFS(
-                        manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
-                    );
-                    
+                            manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId);
+
                     Path mountPoint = Paths.get(System.getProperty("user.home"), VFS_MOUNT_DIR);
                     if (!Files.exists(mountPoint)) {
                         Files.createDirectories(mountPoint);
@@ -469,7 +488,8 @@ public class MainApp extends Application {
                         this.vfs.mount(mountPoint, true, false);
                     }
                 } catch (Exception e) {
-                    System.err.println("FATAL: Failed to mount virtual filesystem. The application will continue without it.");
+                    System.err.println(
+                            "FATAL: Failed to mount virtual filesystem. The application will continue without it.");
                     e.printStackTrace();
                 }
             }).start();
@@ -480,24 +500,23 @@ public class MainApp extends Application {
      * Start Local HTTP Streaming Server (works on all OS: Windows, macOS, Linux)
      * Cho phép truy cập file đang tải qua HTTP URL
      */
-    private void startStreamingServer(DownloadTask task, String fileId, ManifestModel manifest, Scheduler scheduler, 
-                                      PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {
+    private void startStreamingServer(DownloadTask task, String fileId, ManifestModel manifest, Scheduler scheduler,
+            PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath) {
         new Thread(() -> {
             try {
                 LocalStreamingServer server = new LocalStreamingServer(
-                    manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId
-                );
-                
+                        manifest, scheduler, pieceStorage, stateStorage, localFilePath, fileId);
+
                 // Store server in task for cleanup
                 task.setStreamingServer(server);
-                
+
                 server.start();
-                
+
                 // Update task with streaming URL
                 javafx.application.Platform.runLater(() -> {
                     task.setStreamingUrl(server.getStreamingUrl());
                 });
-                
+
                 System.out.println("✅ Local Streaming Server started!");
                 System.out.println("📺 Streaming URL: " + server.getStreamingUrl());
                 System.out.println("💡 You can open this URL in:");
@@ -505,8 +524,18 @@ public class MainApp extends Application {
                 System.out.println("   - Web browsers (for download)");
                 System.out.println("   - Any HTTP client");
                 System.out.println("   - File will be downloaded on-demand when accessed");
+
+                // Notify UI to play video directly
+                if (dashboardController != null) {
+                    final String streamUrl = server.getStreamingUrl();
+                    javafx.application.Platform.runLater(() -> {
+                        dashboardController.playVideoStream(streamUrl, fileId);
+                        dashboardController.updateVideoProgress(task);
+                    });
+                }
             } catch (Exception e) {
-                System.err.println("WARNING: Failed to start Local Streaming Server. The application will continue without it.");
+                System.err.println(
+                        "WARNING: Failed to start Local Streaming Server. The application will continue without it.");
                 System.err.println("Error: " + e.getMessage());
                 e.printStackTrace();
             }
@@ -515,10 +544,10 @@ public class MainApp extends Application {
 
     private ManifestModel fetchManifest(String manifestUrl) throws IOException {
         String originIP = extractIPFromUrl(ORIGIN_SERVER_URL);
-        System.out.println(String.format("[%s] [ORIGIN] GET %s | FROM: %s → TO: %s:8443", 
-            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-            manifestUrl, localIP, originIP));
-        
+        System.out.println(String.format("[%s] [ORIGIN] GET %s | FROM: %s → TO: %s:8443",
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                manifestUrl, localIP, originIP));
+
         Request request = new Request.Builder().url(manifestUrl).build();
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
@@ -528,9 +557,10 @@ public class MainApp extends Application {
                 } else {
                     errorMsg = "Failed to download manifest: HTTP " + response.code();
                 }
-                System.err.println(String.format("[%s] [ORIGIN] ✗ Manifest request failed | Status: %d | FROM: %s:8443", 
-                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                    response.code(), originIP));
+                System.err.println(String.format("[%s] [ORIGIN] ✗ Manifest request failed | Status: %d | FROM: %s:8443",
+                        java.time.LocalDateTime.now()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                        response.code(), originIP));
                 throw new IOException(errorMsg);
             }
             ResponseBody body = response.body();
@@ -539,9 +569,11 @@ public class MainApp extends Application {
             }
             try (Reader reader = new InputStreamReader(body.byteStream())) {
                 ManifestModel manifest = new Gson().fromJson(reader, ManifestModel.class);
-                System.out.println(String.format("[%s] [ORIGIN] ✓ Manifest received | FROM: %s:8443 → TO: %s | Pieces: %d", 
-                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                    originIP, localIP, manifest.getPieces().size()));
+                System.out.println(
+                        String.format("[%s] [ORIGIN] ✓ Manifest received | FROM: %s:8443 → TO: %s | Pieces: %d",
+                                java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                                originIP, localIP, manifest.getPieces().size()));
                 return manifest;
             }
         }
@@ -558,7 +590,7 @@ public class MainApp extends Application {
             System.err.println("Error while unmounting VFS: " + e.getMessage());
         }
         System.out.println("Stopping streaming servers...");
-        
+
         // Close all streaming servers
         for (DownloadTask task : downloadTasks) {
             Object serverObj = task.getStreamingServer();
@@ -566,7 +598,7 @@ public class MainApp extends Application {
                 ((LocalStreamingServer) serverObj).close();
             }
         }
-        
+
         System.out.println("Shutting down application...");
         if (peerServer != null) {
             peerServer.close();
@@ -574,7 +606,7 @@ public class MainApp extends Application {
 
         // Tuần 6: Pause all downloads before shutdown
         downloadTasks.forEach(task -> task.getScheduler().pause());
-        
+
         System.out.println("Shutdown complete.");
     }
 

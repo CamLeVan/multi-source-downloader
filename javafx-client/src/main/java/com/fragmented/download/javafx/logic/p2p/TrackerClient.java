@@ -21,74 +21,77 @@ import okhttp3.ResponseBody;
  * Hỗ trợ announce và lấy danh sách peers
  */
 public class TrackerClient {
-    
+
     private static final Logger log = LoggerFactory.getLogger(TrackerClient.class);
     private static final String DEFAULT_TRACKER_URL = "http://localhost:8081";
-    
+
     private final OkHttpClient httpClient;
     private final String trackerBaseUrl;
     private final Gson gson;
-    
+
     public TrackerClient(OkHttpClient httpClient, String trackerBaseUrl) {
         this.httpClient = httpClient;
         this.trackerBaseUrl = trackerBaseUrl != null ? trackerBaseUrl : DEFAULT_TRACKER_URL;
         this.gson = new Gson();
     }
-    
+
     public TrackerClient(OkHttpClient httpClient) {
         this(httpClient, DEFAULT_TRACKER_URL);
     }
-    
+
     /**
      * Announce với tracker rằng peer này đang tải file
+     * 
      * @param fileId ID của file
      * @param peerId ID của peer (có thể là UUID hoặc tên)
-     * @param port Port mà PeerServer đang lắng nghe
+     * @param port   Port mà PeerServer đang lắng nghe
      * @return true nếu thành công
      */
     public boolean announce(String fileId, String peerId, int port) {
         try {
             // Tạo JSON request manually (không dùng DTO để tránh dependency)
-            String json = String.format("{\"fileId\":\"%s\",\"peerId\":\"%s\",\"port\":%d}", 
+            String json = String.format("{\"fileId\":\"%s\",\"peerId\":\"%s\",\"port\":%d}",
                     fileId, peerId, port);
             RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
-            
+
             String announceUrl = trackerBaseUrl + "/tracker/announce";
-            System.out.println(String.format("[%s] [TRACKER] POST %s | Payload: fileId=%s, peerId=%s, port=%d", 
-                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                announceUrl, fileId, peerId, port));
-            
+            System.out.println(String.format("[%s] [TRACKER] POST %s | Payload: fileId=%s, peerId=%s, port=%d",
+                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                    announceUrl, fileId, peerId, port));
+
             Request httpRequest = new Request.Builder()
                     .url(announceUrl)
                     .post(body)
                     .build();
-            
+
             try (Response response = httpClient.newCall(httpRequest).execute()) {
                 String trackerIP = extractIPFromUrl(trackerBaseUrl);
                 if (response.isSuccessful()) {
-                    System.out.println(String.format("[%s] [TRACKER] ✓ Announce successful | FROM: %s → TO: %s:8081", 
-                        java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                        "Client", trackerIP));
+                    System.out.println(String.format("[%s] [TRACKER] ✓ Announce successful | FROM: %s → TO: %s:8081",
+                            java.time.LocalDateTime.now()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                            "Client", trackerIP));
                     log.info("Successfully announced to tracker for fileId: {}, port: {}", fileId, port);
                     return true;
                 } else {
-                    System.err.println(String.format("[%s] [TRACKER] ✗ Announce failed | Status: %d | TO: %s:8081", 
-                        java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                        response.code(), trackerIP));
+                    System.err.println(String.format("[%s] [TRACKER] ✗ Announce failed | Status: %d | TO: %s:8081",
+                            java.time.LocalDateTime.now()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                            response.code(), trackerIP));
                     log.warn("Failed to announce to tracker. Status: {}", response.code());
                     return false;
                 }
             }
         } catch (IOException e) {
             String trackerIP = extractIPFromUrl(trackerBaseUrl);
-            System.err.println(String.format("[%s] [TRACKER] ✗ Announce error | TO: %s:8081 | Error: %s", 
-                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                trackerIP, e.getMessage()));
+            System.err.println(String.format("[%s] [TRACKER] ✗ Announce error | TO: %s:8081 | Error: %s",
+                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                    trackerIP, e.getMessage()));
             log.error("Error announcing to tracker", e);
             return false;
         }
     }
-    
+
     private String extractIPFromUrl(String url) {
         try {
             if (url.startsWith("http://")) {
@@ -109,9 +112,10 @@ public class TrackerClient {
             return "unknown";
         }
     }
-    
+
     /**
      * Lấy danh sách peers từ tracker
+     * 
      * @param fileId ID của file
      * @return Set các peer addresses (dạng "ip:port")
      */
@@ -119,16 +123,16 @@ public class TrackerClient {
         try {
             String url = trackerBaseUrl + "/tracker/peers?fileId=" + fileId;
             String trackerIP = extractIPFromUrl(trackerBaseUrl);
-            
-            System.out.println(String.format("[%s] [TRACKER] GET %s | FROM: Client → TO: %s:8081", 
-                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                url, trackerIP));
-            
+
+            System.out.println(String.format("[%s] [TRACKER] GET %s | FROM: Client → TO: %s:8081",
+                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                    url, trackerIP));
+
             Request request = new Request.Builder()
                     .url(url)
                     .get()
                     .build();
-            
+
             try (Response response = httpClient.newCall(request).execute()) {
                 ResponseBody body = response.body();
                 if (response.isSuccessful() && body != null) {
@@ -139,29 +143,33 @@ public class TrackerClient {
                     if (peers != null && peers.length > 0) {
                         java.util.Collections.addAll(peerSet, peers);
                     }
-                    
-                    System.out.println(String.format("[%s] [TRACKER] ✓ Retrieved %d peers | FROM: %s:8081 → TO: Client", 
-                        java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                        peerSet.size(), trackerIP));
-                    
+
+                    if (peerSet.size() > 0) {
+                        System.out.println(String.format("[%s] [TRACKER] Found %d peers for %s",
+                                java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                                peerSet.size(), fileId));
+                    }
+
                     log.info("Retrieved {} peers for fileId: {}", peerSet.size(), fileId);
                     return peerSet;
                 } else {
-                    System.err.println(String.format("[%s] [TRACKER] ✗ Get peers failed | Status: %d | FROM: %s:8081", 
-                        java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                        response != null ? response.code() : 0, trackerIP));
-                    log.warn("Failed to get peers from tracker. Status: {}", response != null ? response.code() : "null");
+                    System.err.println(String.format("[%s] [TRACKER] ✗ Get peers failed | Status: %d | FROM: %s:8081",
+                            java.time.LocalDateTime.now()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                            response != null ? response.code() : 0, trackerIP));
+                    log.warn("Failed to get peers from tracker. Status: {}",
+                            response != null ? response.code() : "null");
                     return new HashSet<>();
                 }
             }
         } catch (IOException e) {
             String trackerIP = extractIPFromUrl(trackerBaseUrl);
-            System.err.println(String.format("[%s] [TRACKER] ✗ Get peers error | FROM: %s:8081 | Error: %s", 
-                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
-                trackerIP, e.getMessage()));
+            System.err.println(String.format("[%s] [TRACKER] ✗ Get peers error | FROM: %s:8081 | Error: %s",
+                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                    trackerIP, e.getMessage()));
             log.error("Error getting peers from tracker", e);
             return new HashSet<>();
         }
     }
 }
-

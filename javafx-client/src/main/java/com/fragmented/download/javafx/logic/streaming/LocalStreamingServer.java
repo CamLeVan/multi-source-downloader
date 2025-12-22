@@ -32,15 +32,16 @@ import java.util.regex.Pattern;
  * - Hoạt động trên Windows, macOS, Linux
  */
 public class LocalStreamingServer implements AutoCloseable {
-    
+
     private static final Logger log = LoggerFactory.getLogger(LocalStreamingServer.class);
     private static final int DEFAULT_PORT = 8888;
     private static final int MAX_PORT_ATTEMPTS = 10; // Try 10 ports (8888-8897)
-    
+
     private final HttpServer server;
     private final int actualPort;
-    private final ExecutorService serverExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "streaming-server-thread"));
-    
+    private final ExecutorService serverExecutor = Executors
+            .newSingleThreadExecutor(r -> new Thread(r, "streaming-server-thread"));
+
     private final ManifestModel manifest;
     private final Scheduler scheduler;
     private final PieceStorage pieceStorage;
@@ -48,10 +49,10 @@ public class LocalStreamingServer implements AutoCloseable {
     private final String localFilePath;
     private final String fileId;
     private final String fileName;
-    
-    public LocalStreamingServer(ManifestModel manifest, Scheduler scheduler, 
-                               PieceStorage pieceStorage, IStateStorage stateStorage,
-                               String localFilePath, String fileId) throws IOException {
+
+    public LocalStreamingServer(ManifestModel manifest, Scheduler scheduler,
+            PieceStorage pieceStorage, IStateStorage stateStorage,
+            String localFilePath, String fileId) throws IOException {
         this.manifest = manifest;
         this.scheduler = scheduler;
         this.pieceStorage = pieceStorage;
@@ -59,11 +60,11 @@ public class LocalStreamingServer implements AutoCloseable {
         this.localFilePath = localFilePath;
         this.fileId = fileId;
         this.fileName = Paths.get(localFilePath).getFileName().toString();
-        
+
         // Try to create server on available port
         HttpServer createdServer = null;
         int portUsed = DEFAULT_PORT;
-        
+
         for (int attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++) {
             int portToTry = DEFAULT_PORT + attempt;
             try {
@@ -75,19 +76,21 @@ public class LocalStreamingServer implements AutoCloseable {
                 break;
             } catch (IOException e) {
                 if (attempt == MAX_PORT_ATTEMPTS - 1) {
-                    throw new IOException("Failed to create LocalStreamingServer: Could not bind to any port in range " + 
-                                        DEFAULT_PORT + "-" + (DEFAULT_PORT + MAX_PORT_ATTEMPTS - 1), e);
+                    throw new IOException(
+                            "Failed to create LocalStreamingServer: Could not bind to any port in range " +
+                                    DEFAULT_PORT + "-" + (DEFAULT_PORT + MAX_PORT_ATTEMPTS - 1),
+                            e);
                 }
                 log.debug("Port {} is busy, trying next port...", portToTry);
             }
         }
-        
+
         this.server = createdServer;
         this.actualPort = portUsed;
-        
+
         // Create context for file streaming
         this.server.createContext("/stream/" + fileName, new StreamingHandler());
-        
+
         // Health check endpoint
         this.server.createContext("/health", exchange -> {
             try {
@@ -97,18 +100,18 @@ public class LocalStreamingServer implements AutoCloseable {
                 log.error("Error handling health check", e);
             }
         });
-        
+
         this.server.setExecutor(Executors.newCachedThreadPool());
     }
-    
+
     public int getActualPort() {
         return actualPort;
     }
-    
+
     public String getStreamingUrl() {
         return "http://localhost:" + actualPort + "/stream/" + fileName;
     }
-    
+
     public void start() {
         serverExecutor.submit(() -> {
             log.info("LocalStreamingServer starting on port {}", actualPort);
@@ -117,7 +120,7 @@ public class LocalStreamingServer implements AutoCloseable {
             System.out.println("📺 Streaming URL: " + getStreamingUrl());
         });
     }
-    
+
     @Override
     public void close() {
         if (server != null) {
@@ -127,28 +130,31 @@ public class LocalStreamingServer implements AutoCloseable {
         }
         serverExecutor.shutdown();
     }
-    
+
     /**
      * HTTP Handler để stream file với Range request support
      */
     private class StreamingHandler implements HttpHandler {
         private static final Pattern RANGE_PATTERN = Pattern.compile("bytes=(\\d+)-(\\d*)");
-        
+
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String method = exchange.getRequestMethod();
-            
+
             if (!"GET".equals(method)) {
                 sendError(exchange, 405, "Method Not Allowed");
                 return;
             }
-            
+
             try {
                 // Parse Range header (cho video/audio streaming)
                 String rangeHeader = exchange.getRequestHeaders().getFirst("Range");
+                log.info("STREAM REQ: {} | Range: {}", exchange.getRequestURI(),
+                        rangeHeader != null ? rangeHeader : "Full Content");
+
                 long start = 0;
                 long end = manifest.getFileSize() - 1;
-                
+
                 if (rangeHeader != null) {
                     Matcher matcher = RANGE_PATTERN.matcher(rangeHeader);
                     if (matcher.matches()) {
@@ -158,90 +164,193 @@ public class LocalStreamingServer implements AutoCloseable {
                         }
                     }
                 }
-                
+
                 // Ensure valid range
-                if (start < 0) start = 0;
-                if (end >= manifest.getFileSize()) end = manifest.getFileSize() - 1;
+                if (start < 0)
+                    start = 0;
+                if (end >= manifest.getFileSize())
+                    end = manifest.getFileSize() - 1;
+
+                log.info("STREAM CALC: Requesting bytes {}-{} (Chunk size: {})", start, end, end - start + 1);
+
                 if (start > end) {
+                    log.warn("STREAM ERROR: Invalid Range {}-{}", start, end);
                     sendError(exchange, 416, "Range Not Satisfiable");
                     return;
                 }
-                
+
                 long contentLength = end - start + 1;
-                
+
                 // Calculate which pieces are needed
                 long pieceSize = manifest.getPieceSize();
                 int startPieceId = (int) (start / pieceSize);
                 int endPieceId = (int) (end / pieceSize);
-                
-                // Trigger on-demand download for needed pieces
-                DownloadState state = stateStorage.loadState(fileId);
-                if (state == null) {
-                    sendError(exchange, 500, "Internal Server Error: State not found");
-                    return;
-                }
-                
-                // Download missing pieces on-demand
-                for (int pieceId = startPieceId; pieceId <= endPieceId; pieceId++) {
-                    if (!state.isPieceCompleted(pieceId)) {
-                        log.info("Streaming: Piece {} not available, downloading on-demand...", pieceId);
-                        scheduler.downloadOnDemand(pieceId);
-                        
-                        // Re-check state
-                        state = stateStorage.loadState(fileId);
-                        if (state == null || !state.isPieceCompleted(pieceId)) {
-                            log.error("Streaming: Failed to download piece {} on-demand", pieceId);
-                            sendError(exchange, 503, "Service Unavailable: Piece download failed");
-                            return;
-                        }
-                    }
-                }
-                
+
+                // Optimization: Pre-trigger download for critical MP4 Metadata (Start & End of
+                // file) ASYNC
+                // We run this in a separate thread to NOT block the HTTP Response (TTFB)
+                int lastPieceIdx = (int) ((manifest.getFileSize() - 1) / pieceSize);
+                new Thread(() -> {
+                    // Priority: Start (Header) -> End (MOOV) -> Second (Buffer)
+                    scheduler.downloadOnDemand(0);
+                    scheduler.downloadOnDemand(lastPieceIdx);
+                    if (lastPieceIdx > 1)
+                        scheduler.downloadOnDemand(lastPieceIdx - 1);
+                    scheduler.downloadOnDemand(1);
+                }, "Stream-Preloader").start();
+
                 // Send response headers
                 exchange.getResponseHeaders().set("Content-Type", getContentType(fileName));
                 exchange.getResponseHeaders().set("Accept-Ranges", "bytes");
                 exchange.getResponseHeaders().set("Content-Length", String.valueOf(contentLength));
-                
+
                 if (rangeHeader != null) {
                     // Partial content response (206)
-                    exchange.getResponseHeaders().set("Content-Range", 
-                        String.format("bytes %d-%d/%d", start, end, manifest.getFileSize()));
+                    exchange.getResponseHeaders().set("Content-Range",
+                            String.format("bytes %d-%d/%d", start, end, manifest.getFileSize()));
                     exchange.sendResponseHeaders(206, contentLength);
                 } else {
                     // Full content response (200)
                     exchange.sendResponseHeaders(200, contentLength);
                 }
-                
+
                 // Stream data
                 try (OutputStream os = exchange.getResponseBody()) {
                     streamFileData(os, start, contentLength);
+                } catch (IOException e) {
+                    // Suppress expected errors during streaming (Client disconnects, etc.)
+                    String msg = e.getMessage();
+                    if (msg != null && (msg.contains("insufficient bytes written")
+                            || msg.contains("An established connection was aborted")
+                            || msg.contains("Broken pipe"))) {
+                        log.debug("Streaming finished early (Client disconnected): " + msg);
+                    } else {
+                        throw e; // Rethrow unexpected IO errors
+                    }
                 }
-                
+
             } catch (Exception e) {
-                log.error("Error handling streaming request", e);
-                sendError(exchange, 500, "Internal Server Error: " + e.getMessage());
+                // Check once more in case it bubbled up
+                String msg = e.getMessage();
+                if (msg != null && (msg.contains("insufficient bytes written") || msg.contains("Broken pipe"))) {
+                    log.debug("Streaming stopped abruptly: " + msg);
+                } else {
+                    log.error("Error handling streaming request", e);
+                    // Avoid sending error on closed connection
+                    try {
+                        exchange.close();
+                    } catch (Exception ignore) {
+                    }
+                }
             }
         }
-        
+
         private void streamFileData(OutputStream os, long start, long length) throws IOException {
-            byte[] buffer = new byte[8192]; // 8KB buffer
             long remaining = length;
-            long currentOffset = start;
-            
+            long currentPos = start;
+            long pieceSize = manifest.getPieceSize();
+
             while (remaining > 0) {
-                int toRead = (int) Math.min(buffer.length, remaining);
-                byte[] data = pieceStorage.readPiece(localFilePath, currentOffset, toRead);
-                
-                if (data == null || data.length == 0) {
-                    break; // No more data available
+                // 1. Identify Needed Piece
+                int pieceId = (int) (currentPos / pieceSize);
+
+                // Read-Ahead Optimization: Trigger download for NEXT pieces asynchronously
+                int nextPiece = pieceId + 1;
+                // Pre-fetch next 2 pieces to ensure smooth playback
+                if (nextPiece < manifest.getPieces().size() && !scheduler.isPieceCompleted(nextPiece)) {
+                    new Thread(() -> {
+                        scheduler.downloadOnDemand(nextPiece);
+                        if (nextPiece + 1 < manifest.getPieces().size())
+                            scheduler.downloadOnDemand(nextPiece + 1);
+                    }, "Stream-ReadAhead-" + nextPiece).start();
                 }
-                
-                os.write(data, 0, Math.min(data.length, toRead));
-                currentOffset += data.length;
+
+                // 2. Ensure piece is available (Progressive Download Logic)
+                int attempts = 0;
+                // Wait up to 20 seconds for the piece to arrive
+                while (!scheduler.isPieceCompleted(pieceId) && attempts < 40) {
+                    if (attempts == 0 || attempts % 10 == 0) {
+                        log.info("Streaming: Waiting for Piece {} (Attempt {}/40)...", pieceId, attempts);
+                        scheduler.downloadOnDemand(pieceId); // Trigger priority download
+                    }
+
+                    if (scheduler.isPieceCompleted(pieceId))
+                        break;
+
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Streaming Interrupted");
+                    }
+                    attempts++;
+                }
+
+                if (!scheduler.isPieceCompleted(pieceId)) {
+                    log.error("Streaming timeout: Piece {} unavailable after wait.", pieceId);
+                    break; // Stop streaming
+                }
+
+                // 3. Read Data Chunk
+                // Calculate bytes remaining in THIS piece to prevent reading into the next
+                // unverified piece
+                long nextPieceStart = (long) (pieceId + 1) * pieceSize;
+                long bytesInThisPiece = nextPieceStart - currentPos;
+
+                // Read in 64KB chunks, but clamp to piece boundary
+                int toRead = (int) Math.min(65536, remaining);
+                toRead = (int) Math.min(toRead, bytesInThisPiece);
+
+                // Ensure we don't read past the file size
+                if (currentPos + toRead > manifest.getFileSize()) {
+                    toRead = (int) (manifest.getFileSize() - currentPos);
+                }
+
+                if (toRead <= 0)
+                    break;
+
+                byte[] data = null;
+                // Retry read logic for disk stability
+                for (int i = 0; i < 3; i++) {
+                    try {
+                        data = pieceStorage.readPiece(localFilePath, currentPos, toRead);
+                        if (data != null && data.length > 0)
+                            break;
+                    } catch (IOException e) {
+                        // Transient disk error?
+                        try {
+                            Thread.sleep(50);
+                        } catch (Exception ignore) {
+                        }
+                    }
+                }
+
+                if (data == null || data.length == 0) {
+                    log.error("Streaming Error: Failed to read data at offset {}", currentPos);
+                    break;
+                }
+
+                // 4. Send to Client
+                try {
+                    os.write(data);
+                    os.flush();
+                } catch (IOException e) {
+                    // Check for client disconnect
+                    String msg = e.getMessage();
+                    if (msg != null && (msg.contains("Aborted") || msg.contains("Pipe")
+                            || msg.contains("Reset") || msg.contains("insufficient bytes"))) {
+                        log.debug("Streaming client disconnected.");
+                        break;
+                    } else {
+                        throw e; // Rethrow real errors
+                    }
+                }
+
+                currentPos += data.length;
                 remaining -= data.length;
             }
         }
-        
+
         private String getContentType(String fileName) {
             String lower = fileName.toLowerCase();
             if (lower.endsWith(".mp4") || lower.endsWith(".m4v")) {
@@ -261,7 +370,7 @@ public class LocalStreamingServer implements AutoCloseable {
             }
             return "application/octet-stream";
         }
-        
+
         private void sendError(HttpExchange exchange, int code, String message) throws IOException {
             exchange.sendResponseHeaders(code, message.length());
             try (OutputStream os = exchange.getResponseBody()) {
@@ -270,4 +379,3 @@ public class LocalStreamingServer implements AutoCloseable {
         }
     }
 }
-

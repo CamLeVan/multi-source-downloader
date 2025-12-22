@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import com.fragmented.download.core.logic.SmartDetector;
+import com.fragmented.download.core.model.NetworkMetrics;
+
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class OkHttpDownloadClient implements DownloadClient {
@@ -21,6 +25,7 @@ public class OkHttpDownloadClient implements DownloadClient {
     private final long pieceSize;
     private final long fileSize;
     private final ScheduledExecutorService scheduler;
+    private final SmartDetector smartDetector = new SmartDetector(); // AI Supervisor
 
     public OkHttpDownloadClient(OkHttpClient httpClient, int numberOfThreads, long pieceSize, long fileSize) {
         this.httpClient = httpClient;
@@ -86,15 +91,33 @@ public class OkHttpDownloadClient implements DownloadClient {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) {
-
-                // *** BẮT ĐẦU SỬA LỖI ***
-                // (Đã cập nhật logic onResponse)
+                long startTime = System.nanoTime(); // Start measuring time
 
                 // 1. Thành công
                 if (response.isSuccessful()) { // Mã 2xx
                     try (ResponseBody body = response.body()) {
                         Objects.requireNonNull(body, "Response body is null");
-                        future.complete(body.bytes());
+                        byte[] data = body.bytes();
+                        
+                        // Measure metrics
+                        long endTime = System.nanoTime();
+                        long durationNs = endTime - startTime;
+                        long durationMs = durationNs / 1_000_000;
+                        double speedKBps = (data.length / 1024.0) / (durationMs / 1000.0);
+                        
+                        // Create metrics object
+                        NetworkMetrics metrics = new NetworkMetrics(durationMs, speedKBps, 0.0, true);
+                        
+                        // AI Check: Is this connection anomalous?
+                        if (smartDetector.isAnomaly(metrics)) {
+                            System.err.println("⚠ SmartDetector: Connection to " + call.request().url() + " is anomalous! Switching source...");
+                            // Treat as failure to trigger fallback
+                            response.close();
+                            tryPieceFromSource(piece, sourceIndex + 1, future);
+                            return;
+                        }
+
+                        future.complete(data);
                     } catch (IOException e) {
                         future.completeExceptionally(e);
                     }
@@ -123,8 +146,6 @@ public class OkHttpDownloadClient implements DownloadClient {
                 System.err.println("Unrecoverable error for " + request.url() + ": " + response.code() + ". Trying next source.");
                 response.close();
                 tryPieceFromSource(piece, sourceIndex + 1, future);
-                
-                // *** KẾT THÚC SỬA LỖI ***
             }
         });
     }
