@@ -57,14 +57,13 @@ public class MainApp extends Application {
     private static final String TRACKER_URL = ConfigManager.get("tracker.url", "http://localhost:8081");
     private static final String ORIGIN_SERVER_URL = ConfigManager.get("origin.server.url", "https://localhost:8443");
     private static final String CLIENT_NAME = ConfigManager.get("client.name", "Client-1");
-    private static final String MANIFEST_URL = ORIGIN_SERVER_URL + "/manifest/demo.mp4";
 
     private final OkHttpClient httpClient = new OkHttpClient();
     private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList(); // Tuần 6:
                                                                                                     // Multi-download
     private PeerServer peerServer;
     private VirtualDownloaderFS vfs;
-    private LocalStreamingServer streamingServer; // HTTP streaming server (works on all OS)
+
     private TrackerClient trackerClient;
     private final String peerId = UUID.randomUUID().toString(); // Unique peer ID
     private String localIP;
@@ -83,8 +82,6 @@ public class MainApp extends Application {
         } else {
             localIP = NetworkUtil.getLocalIPAddress(); // Fallback
         }
-
-        String hostname = NetworkUtil.getHostname();
 
         FlowLogger.logSection("CLIENT INITIALIZATION");
         FlowLogger.logInfo("Client Name: " + CLIENT_NAME, localIP);
@@ -220,7 +217,10 @@ public class MainApp extends Application {
 
             // 7. Set up backend components
             FlowLogger.logStep(step++, "Setting up Download Client", localIP, null);
-            OkHttpDownloadClient okHttpClient = new OkHttpDownloadClient(httpClient, 4, manifest.getPieceSize(),
+            // Allow more concurrent connections (10) than scheduler workers (4)
+            // This ensures "On-Demand" streaming requests don't get blocked by background
+            // tasks
+            OkHttpDownloadClient okHttpClient = new OkHttpDownloadClient(httpClient, 10, manifest.getPieceSize(),
                     manifest.getFileSize());
             SourceTrackingDownloadClient downloadClient = new SourceTrackingDownloadClient(okHttpClient);
 
@@ -262,6 +262,10 @@ public class MainApp extends Application {
             FlowLogger.logSeparator();
             scheduler.start();
 
+            // Implement "Metadata First" strategy to support immediate streaming of MP4
+            // files
+            applyMetadataFirstStrategy(scheduler, manifest);
+
             // 14. Periodically refresh peer list (background thread)
             startPeerRefreshThread(fileId);
 
@@ -300,36 +304,6 @@ public class MainApp extends Application {
     /**
      * Fix manifest sources: Replace localhost với Origin Server IP thực tế
      */
-    private void fixManifestSources(ManifestModel manifest, String originServerBaseUrl) {
-        String originServerHost = extractIPFromUrl(originServerBaseUrl);
-        int originServerPort = 8080; // Default port
-
-        // Extract port from URL
-        try {
-            java.net.URL url = new java.net.URL(originServerBaseUrl);
-            originServerPort = url.getPort() > 0 ? url.getPort() : 8080;
-        } catch (Exception e) {
-            // Use default
-        }
-
-        String originServerUrl = "http://" + originServerHost + ":" + originServerPort;
-
-        for (PieceModel piece : manifest.getPieces()) {
-            List<String> fixedSources = new ArrayList<>();
-            for (String source : piece.getSources()) {
-                // Replace localhost với Origin Server IP thực tế
-                if (source.contains("localhost:8080") || source.contains("127.0.0.1:8080")) {
-                    String fixedSource = source.replace("http://localhost:8080", originServerUrl)
-                            .replace("http://127.0.0.1:8080", originServerUrl);
-                    fixedSources.add(fixedSource);
-                    System.out.println("[FIX] Replaced localhost source: " + source + " → " + fixedSource);
-                } else {
-                    fixedSources.add(source);
-                }
-            }
-            piece.setSources(fixedSources);
-        }
-    }
 
     /**
      * Thêm peer sources vào manifest từ tracker
@@ -359,7 +333,7 @@ public class MainApp extends Application {
             for (String peerAddress : peers) {
                 // Tránh thêm chính mình
                 if (peerServer != null) {
-                    String myAddress = localIP + ":" + peerPort;
+
                     if (peerAddress.contains(localIP) && peerAddress.contains(String.valueOf(peerPort))) {
                         continue;
                     }
@@ -619,5 +593,37 @@ public class MainApp extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    /**
+     * Applies a "Metadata First" strategy for MP4 streaming.
+     * Prioritizes downloading the beginning (Header) and end (MOOV atom) of the
+     * file immediately.
+     * This allows players to parse metadata and begin playback without waiting for
+     * sequential download.
+     */
+    private void applyMetadataFirstStrategy(Scheduler scheduler, ManifestModel manifest) {
+        new Thread(() -> {
+            try {
+                // Small delay to ensure scheduler worker pool is fully initialized
+                Thread.sleep(200);
+            } catch (InterruptedException refresh) {
+                Thread.currentThread().interrupt();
+            }
+
+            System.out.println("🚀 [STRATEGY] Executing Metadata-First Download Strategy...");
+
+            // 1. Header (Piece 0 & 1) logic is crucial connection establishment
+            scheduler.downloadOnDemand(0);
+            scheduler.downloadOnDemand(1);
+
+            // 2. Footer (MOOV Atom) usually resides in the last few pieces of MP4 files
+            int totalPieces = manifest.getPieces().size();
+            if (totalPieces > 2) {
+                // Download last 2 pieces to be safe
+                scheduler.downloadOnDemand(totalPieces - 1);
+                scheduler.downloadOnDemand(totalPieces - 2);
+            }
+        }).start();
     }
 }

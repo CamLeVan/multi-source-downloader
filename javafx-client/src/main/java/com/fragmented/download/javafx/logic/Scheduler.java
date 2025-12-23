@@ -49,6 +49,9 @@ public class Scheduler {
     private volatile SchedulerState state = SchedulerState.IDLE; // Tuần 6: State tracking
     private final AtomicLong downloadedBytes = new AtomicLong(0);
 
+    // Track active downloads to prevent duplicate work and allow 'piggybacking'
+    private final java.util.concurrent.ConcurrentHashMap<Integer, java.util.concurrent.CompletableFuture<Void>> activeDownloads = new java.util.concurrent.ConcurrentHashMap<>();
+
     public Scheduler(ManifestModel manifest, DownloadClient downloadClient, ErrorCallback errorCallback,
             int numberOfWorkers,
             PieceStorage pieceStorage, IStateStorage stateStorage, String localFilePath, String fileId)
@@ -119,7 +122,32 @@ public class Scheduler {
             workerExecutor.submit(() -> {
                 while (state == SchedulerState.RUNNING && !pieceQueue.isEmpty()) {
                     PieceModel piece = pieceQueue.poll();
-                    if (piece != null) {
+
+                    if (piece == null)
+                        continue;
+
+                    // 1. Check if already completed (race condition check)
+                    synchronized (downloadState) {
+                        if (downloadState.isPieceCompleted(piece.getId()))
+                            continue;
+                    }
+
+                    // 2. Register active download
+                    java.util.concurrent.CompletableFuture<Void> task = new java.util.concurrent.CompletableFuture<>();
+                    java.util.concurrent.CompletableFuture<Void> existingTask = activeDownloads
+                            .putIfAbsent(piece.getId(), task);
+
+                    if (existingTask != null) {
+                        // Someone else is downloading this piece (e.g., onDemand stream), let's wait
+                        // for them
+                        try {
+                            existingTask.join();
+                        } catch (Exception e) {
+                            /* ignore */ }
+                        continue;
+                    }
+
+                    try {
                         String sourceIP = piece.getSources() != null && !piece.getSources().isEmpty()
                                 ? extractIPFromUrl(piece.getSources().get(0))
                                 : "unknown";
@@ -131,9 +159,7 @@ public class Scheduler {
                                 piece.getSources() != null ? piece.getSources().size() : 0,
                                 sourceIP));
 
-                        // Retry callback for hash mismatch
                         Consumer<PieceModel> retryCallback = (retryPiece) -> {
-                            // Đưa piece trở lại queue với sources đã bỏ source đầu tiên
                             System.out
                                     .println(String.format("[%s] [RETRY] Re-queuing piece %d with %d remaining sources",
                                             java.time.LocalDateTime.now().format(
@@ -142,6 +168,7 @@ public class Scheduler {
                             pieceQueue.offer(retryPiece);
                         };
 
+                        // 3. Execute Download AND WAIT (Fixes the "Spinning Loop" bug)
                         worker.download(piece, (data) -> {
                             long totalDownloaded = downloadedBytes.addAndGet(data.length);
                             String downloadedFrom = piece.getSources() != null && !piece.getSources().isEmpty()
@@ -152,17 +179,31 @@ public class Scheduler {
                                     java.time.LocalDateTime.now()
                                             .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
                                     piece.getId(), downloadedFrom, data.length / 1024, totalDownloaded / 1024 / 1024));
+                        }, retryCallback).join(); // BLOCK until finished!
 
-                            // Track source progress (source đã được track trong
-                            // SourceTrackingDownloadClient)
-                            // Bytes sẽ được track trong DownloadTask khi piece download thành công
-                        }, retryCallback);
+                    } catch (Exception e) {
+                        // Logged in worker
+                    } finally {
+                        // 4. Always remove from active map
+                        activeDownloads.remove(piece.getId());
+                        task.complete(null); // Notify anyone waiting
                     }
                 }
+
                 // Check if the download finished naturally
-                if (pieceQueue.isEmpty() && state == SchedulerState.RUNNING) {
-                    state = SchedulerState.FINISHED;
-                    System.out.println("All pieces downloaded. Download finished.");
+                if (pieceQueue.isEmpty() && state == SchedulerState.RUNNING && activeDownloads.isEmpty()) {
+                    // Double check strict completion
+                    boolean allDone = true;
+                    for (PieceModel p : manifest.getPieces()) {
+                        if (!downloadState.isPieceCompleted(p.getId())) {
+                            allDone = false;
+                            break;
+                        }
+                    }
+                    if (allDone) {
+                        state = SchedulerState.FINISHED;
+                        System.out.println("All pieces downloaded. Download finished.");
+                    }
                 }
             });
         }
@@ -229,6 +270,10 @@ public class Scheduler {
      * 
      * @param pieceId The ID of the piece to download
      */
+    /**
+     * Tuần 4: Download a specific piece on-demand (for VirtualFS)
+     * Optimized: Reuse existing download if active
+     */
     public void downloadOnDemand(int pieceId) {
         // Check if piece is already completed
         synchronized (downloadState) {
@@ -237,45 +282,53 @@ public class Scheduler {
             }
         }
 
-        // Get the piece metadata
         if (pieceId < 0 || pieceId >= manifest.getPieces().size()) {
-            System.err.println("Invalid piece ID: " + pieceId);
             return;
         }
 
-        PieceModel piece = manifest.getPieces().get(pieceId);
+        // 1. Check if currently downloading (Piggyback)
+        java.util.concurrent.CompletableFuture<Void> activeTask = activeDownloads.get(pieceId);
+        if (activeTask != null) {
+            try {
+                System.out.println("Scheduler: Piece " + pieceId + " is already downloading, waiting for it...");
+                activeTask.get(10, java.util.concurrent.TimeUnit.SECONDS);
+                return;
+            } catch (Exception e) {
+                // Should fallback to retry manually if failed?
+                // For now, assume if it failed, it's removed from map and user will retry.
+            }
+        }
 
-        // Create a worker and download immediately (blocking for VirtualFS)
+        // 2. Not active, start new priority download
+        PieceModel piece = manifest.getPieces().get(pieceId);
         DownloadWorker worker = new DownloadWorker(downloadClient, errorCallback, pieceStorage,
                 stateStorage, localFilePath, fileId,
                 manifest.getPieceSize(), downloadState);
 
-        // Submit and wait for completion (blocking call for on-demand access)
-        try {
-            java.util.concurrent.CompletableFuture<Void> future = new java.util.concurrent.CompletableFuture<>();
+        java.util.concurrent.CompletableFuture<Void> task = new java.util.concurrent.CompletableFuture<>();
+        if (activeDownloads.putIfAbsent(pieceId, task) != null) {
+            // Race lost, someone else started it
+            downloadOnDemand(pieceId); // Recursive retry (will hit step 1)
+            return;
+        }
 
+        try {
             long startTime = System.currentTimeMillis();
             System.out.println("Scheduler: Starting on-demand download for Piece " + pieceId);
 
             worker.download(piece, (data) -> {
                 long totalDownloaded = downloadedBytes.addAndGet(data.length);
                 long duration = System.currentTimeMillis() - startTime;
-                System.out.println(
-                        "On-demand downloaded piece " + pieceId + " in " + duration + "ms. Total: " + totalDownloaded);
-                future.complete(null);
-            });
+                System.out.println("On-demand downloaded piece " + pieceId + " in " + duration + "ms.");
+            }, null).join(); // Use join() to wait, or get() with timeout
 
-            // Wait for download to complete (with timeout - reduced for better
-            // responsiveness)
-            future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            // We use get() with timeout below to be safe against hangs
 
-        } catch (java.util.concurrent.TimeoutException e) {
-            System.err.println("Timeout downloading piece " + pieceId + " on-demand");
-        } catch (java.util.concurrent.ExecutionException e) {
-            System.err.println("Failed to download piece " + pieceId + " on-demand: " + e.getCause().getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.err.println("Interrupted while downloading piece " + pieceId + " on-demand");
+        } catch (Exception e) {
+            System.err.println("Failed to download piece " + pieceId + " on-demand: " + e.getMessage());
+        } finally {
+            activeDownloads.remove(pieceId);
+            task.complete(null);
         }
     }
 

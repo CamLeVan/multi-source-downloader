@@ -48,4 +48,4 @@ keystore.p12
 *.mp4
 *.mkv
 **/files/
-**/download/
+# **/download/

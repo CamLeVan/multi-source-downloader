@@ -1,6 +1,5 @@
 package com.fragmented.download.javafx.logic.streaming;
 
-import com.fragmented.download.core.model.DownloadState;
 import com.fragmented.download.core.model.ManifestModel;
 import com.fragmented.download.core.storage.IStateStorage;
 import com.fragmented.download.core.storage.PieceStorage;
@@ -14,8 +13,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,8 +36,17 @@ public class LocalStreamingServer implements AutoCloseable {
 
     private final HttpServer server;
     private final int actualPort;
+
+    // Executor cho Server chạy (để không block UI Main Thread)
     private final ExecutorService serverExecutor = Executors
             .newSingleThreadExecutor(r -> new Thread(r, "streaming-server-thread"));
+
+    // Executor riêng cho việc đọc trước dữ liệu (Prefetching)
+    private final ExecutorService prefetchExecutor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "streaming-prefetch");
+        t.setDaemon(true);
+        return t;
+    });
 
     private final ManifestModel manifest;
     private final Scheduler scheduler;
@@ -112,6 +118,9 @@ public class LocalStreamingServer implements AutoCloseable {
         return "http://localhost:" + actualPort + "/stream/" + fileName;
     }
 
+    /**
+     * Khởi động server (Chạy trên thread riêng)
+     */
     public void start() {
         serverExecutor.submit(() -> {
             log.info("LocalStreamingServer starting on port {}", actualPort);
@@ -129,6 +138,7 @@ public class LocalStreamingServer implements AutoCloseable {
             log.info("LocalStreamingServer stopped");
         }
         serverExecutor.shutdown();
+        prefetchExecutor.shutdown(); // Close the prefetch pool
     }
 
     /**
@@ -149,8 +159,8 @@ public class LocalStreamingServer implements AutoCloseable {
             try {
                 // Parse Range header (cho video/audio streaming)
                 String rangeHeader = exchange.getRequestHeaders().getFirst("Range");
-                log.info("STREAM REQ: {} | Range: {}", exchange.getRequestURI(),
-                        rangeHeader != null ? rangeHeader : "Full Content");
+                log.info("STREAM: Received REQ {} {} | Range: {}", method, exchange.getRequestURI(),
+                        rangeHeader != null ? rangeHeader : "Full");
 
                 long start = 0;
                 long end = manifest.getFileSize() - 1;
@@ -164,6 +174,8 @@ public class LocalStreamingServer implements AutoCloseable {
                         }
                     }
                 }
+
+                log.info("STREAM: Calculated Range {}-{} (Len: {})", start, end, end - start + 1);
 
                 // Ensure valid range
                 if (start < 0)
@@ -183,21 +195,19 @@ public class LocalStreamingServer implements AutoCloseable {
 
                 // Calculate which pieces are needed
                 long pieceSize = manifest.getPieceSize();
-                int startPieceId = (int) (start / pieceSize);
-                int endPieceId = (int) (end / pieceSize);
 
                 // Optimization: Pre-trigger download for critical MP4 Metadata (Start & End of
                 // file) ASYNC
                 // We run this in a separate thread to NOT block the HTTP Response (TTFB)
                 int lastPieceIdx = (int) ((manifest.getFileSize() - 1) / pieceSize);
-                new Thread(() -> {
+                prefetchExecutor.submit(() -> {
                     // Priority: Start (Header) -> End (MOOV) -> Second (Buffer)
                     scheduler.downloadOnDemand(0);
                     scheduler.downloadOnDemand(lastPieceIdx);
                     if (lastPieceIdx > 1)
                         scheduler.downloadOnDemand(lastPieceIdx - 1);
                     scheduler.downloadOnDemand(1);
-                }, "Stream-Preloader").start();
+                });
 
                 // Send response headers
                 exchange.getResponseHeaders().set("Content-Type", getContentType(fileName));
@@ -229,17 +239,17 @@ public class LocalStreamingServer implements AutoCloseable {
                     }
                 }
 
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 // Check once more in case it bubbled up
                 String msg = e.getMessage();
                 if (msg != null && (msg.contains("insufficient bytes written") || msg.contains("Broken pipe"))) {
                     log.debug("Streaming stopped abruptly: " + msg);
                 } else {
-                    log.error("Error handling streaming request", e);
+                    log.error("CRITICAL ERROR handling streaming request", e);
                     // Avoid sending error on closed connection
                     try {
                         exchange.close();
-                    } catch (Exception ignore) {
+                    } catch (Throwable ignore) {
                     }
                 }
             }
@@ -249,6 +259,7 @@ public class LocalStreamingServer implements AutoCloseable {
             long remaining = length;
             long currentPos = start;
             long pieceSize = manifest.getPieceSize();
+            log.info("STREAM: Starting data transfer loop (Start: {}, Len: {}).", start, length);
 
             while (remaining > 0) {
                 // 1. Identify Needed Piece
@@ -258,20 +269,21 @@ public class LocalStreamingServer implements AutoCloseable {
                 int nextPiece = pieceId + 1;
                 // Pre-fetch next 2 pieces to ensure smooth playback
                 if (nextPiece < manifest.getPieces().size() && !scheduler.isPieceCompleted(nextPiece)) {
-                    new Thread(() -> {
+                    prefetchExecutor.submit(() -> {
                         scheduler.downloadOnDemand(nextPiece);
                         if (nextPiece + 1 < manifest.getPieces().size())
                             scheduler.downloadOnDemand(nextPiece + 1);
-                    }, "Stream-ReadAhead-" + nextPiece).start();
+                    });
                 }
 
                 // 2. Ensure piece is available (Progressive Download Logic)
                 int attempts = 0;
-                // Wait up to 20 seconds for the piece to arrive
-                while (!scheduler.isPieceCompleted(pieceId) && attempts < 40) {
-                    if (attempts == 0 || attempts % 10 == 0) {
-                        log.info("Streaming: Waiting for Piece {} (Attempt {}/40)...", pieceId, attempts);
-                        scheduler.downloadOnDemand(pieceId); // Trigger priority download
+                // Wait up to 60 seconds (was 20s) for the piece to arrive
+                // Increased timeout for slow networks
+                while (!scheduler.isPieceCompleted(pieceId) && attempts < 120) {
+                    if (attempts == 0 || attempts % 4 == 0) { // Retry every 2 seconds (500ms * 4)
+                        log.info("Streaming: Waiting for Piece {} (Attempt {}/120)...", pieceId, attempts);
+                        scheduler.downloadOnDemand(pieceId); // Trigger priority download aggressively
                     }
 
                     if (scheduler.isPieceCompleted(pieceId))
@@ -297,8 +309,8 @@ public class LocalStreamingServer implements AutoCloseable {
                 long nextPieceStart = (long) (pieceId + 1) * pieceSize;
                 long bytesInThisPiece = nextPieceStart - currentPos;
 
-                // Read in 64KB chunks, but clamp to piece boundary
-                int toRead = (int) Math.min(65536, remaining);
+                // Read in 512KB chunks (optimized for video streaming)
+                int toRead = (int) Math.min(524288, remaining);
                 toRead = (int) Math.min(toRead, bytesInThisPiece);
 
                 // Ensure we don't read past the file size
@@ -310,13 +322,20 @@ public class LocalStreamingServer implements AutoCloseable {
                     break;
 
                 byte[] data = null;
-                // Retry read logic for disk stability
-                for (int i = 0; i < 3; i++) {
+                // Retry read logic for disk stability - Increased to 20 attempts
+                for (int i = 0; i < 20; i++) {
                     try {
+                        // log.debug("STREAM READ: Attempt {} read at offset {} len {}", i + 1,
+                        // currentPos, toRead);
                         data = pieceStorage.readPiece(localFilePath, currentPos, toRead);
-                        if (data != null && data.length > 0)
+                        if (data != null && data.length > 0) {
+                            if (i > 0)
+                                log.info("STREAM: Read recovered after {} attempts at {}", i + 1, currentPos);
                             break;
+                        }
                     } catch (IOException e) {
+                        if (i % 5 == 0)
+                            log.warn("STREAM: Disk Read retry {}/20 at {}: {}", i + 1, currentPos, e.getMessage());
                         // Transient disk error?
                         try {
                             Thread.sleep(50);
@@ -326,7 +345,7 @@ public class LocalStreamingServer implements AutoCloseable {
                 }
 
                 if (data == null || data.length == 0) {
-                    log.error("Streaming Error: Failed to read data at offset {}", currentPos);
+                    log.error("Streaming Error: Failed to read data at offset {}, len {}", currentPos, toRead);
                     break;
                 }
 
@@ -334,6 +353,8 @@ public class LocalStreamingServer implements AutoCloseable {
                 try {
                     os.write(data);
                     os.flush();
+                    // log.debug("STREAM SENT: {} bytes at offset {}", data.length, currentPos); //
+                    // Enable for verbose debug
                 } catch (IOException e) {
                     // Check for client disconnect
                     String msg = e.getMessage();
@@ -349,6 +370,7 @@ public class LocalStreamingServer implements AutoCloseable {
                 currentPos += data.length;
                 remaining -= data.length;
             }
+            log.info("STREAM DONE: Finished sending ranges. Remaining: {}", remaining);
         }
 
         private String getContentType(String fileName) {
