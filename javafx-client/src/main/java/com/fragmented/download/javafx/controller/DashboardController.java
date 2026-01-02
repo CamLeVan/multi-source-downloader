@@ -114,11 +114,25 @@ public class DashboardController {
         }
     }
 
+    // Retry counter cho video playback
+    private int videoPlaybackRetryCount = 0;
+    private static final int MAX_VIDEO_RETRIES = 3;
+
     /**
      * Start Playing Video Stream
      * Called by MainApp when streaming server is ready
      */
     public void playVideoStream(String streamUrl, String fileName) {
+        playVideoStream(streamUrl, fileName, 0);
+    }
+
+    /**
+     * Start Playing Video Stream với retry logic
+     * @param streamUrl URL của stream
+     * @param fileName Tên file
+     * @param retryCount Số lần đã retry
+     */
+    private void playVideoStream(String streamUrl, String fileName, int retryCount) {
         if (streamUrl == null)
             return;
 
@@ -133,12 +147,13 @@ public class DashboardController {
             return;
         }
 
-        System.out.println("[UI] Attempting to play stream: " + streamUrl);
+        System.out.println("[UI] Attempting to play stream: " + streamUrl + (retryCount > 0 ? " (Retry " + retryCount + ")" : ""));
 
         // Stop previous player
         if (currentMediaPlayer != null) {
             currentMediaPlayer.stop();
             currentMediaPlayer.dispose();
+            currentMediaPlayer = null;
         }
 
         try {
@@ -146,37 +161,107 @@ public class DashboardController {
             currentMediaPlayer = new javafx.scene.media.MediaPlayer(media);
             mediaPlayerView.setMediaPlayer(currentMediaPlayer);
 
-            // Auto Play
-            currentMediaPlayer.setAutoPlay(true);
-
             // UI Update
             if (playerPlaceholder != null)
                 playerPlaceholder.setVisible(false);
             if (nowPlayingLabel != null) {
-                nowPlayingLabel.setText("Now Playing: " + fileName);
-                nowPlayingLabel.setStyle("-fx-text-fill: #2ecc71; -fx-font-weight: bold;");
+                if (retryCount > 0) {
+                    nowPlayingLabel.setText("Retrying playback: " + fileName + " (Attempt " + (retryCount + 1) + ")");
+                    nowPlayingLabel.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
+                } else {
+                    nowPlayingLabel.setText("Now Playing: " + fileName);
+                    nowPlayingLabel.setStyle("-fx-text-fill: #2ecc71; -fx-font-weight: bold;");
+                }
             }
 
-            // Handle errors
+            // Handle successful initialization
+            currentMediaPlayer.setOnReady(() -> {
+                System.out.println("[UI] Media player ready for: " + fileName);
+                if (nowPlayingLabel != null) {
+                    nowPlayingLabel.setText("Now Playing: " + fileName);
+                    nowPlayingLabel.setStyle("-fx-text-fill: #2ecc71; -fx-font-weight: bold;");
+                }
+                if (statusLabel != null) {
+                    statusLabel.setText("Video ready for playback");
+                }
+                videoPlaybackRetryCount = 0; // Reset retry count on success
+            });
+
+            // Handle errors với retry logic
             currentMediaPlayer.setOnError(() -> {
-                String err = currentMediaPlayer.getError().toString();
+                String err = currentMediaPlayer.getError() != null ? currentMediaPlayer.getError().toString() : "Unknown error";
                 System.err.println("Media Error: " + err);
 
-                if (statusLabel != null) {
-                    if (err.contains("ERROR_MEDIA_INVALID") || err.contains("UNKNOWN")) {
-                        statusLabel.setText("⚠️ Loading Video... Please wait or refresh.");
-                        if (nowPlayingLabel != null)
-                            nowPlayingLabel.setText("Buffering... (Try refreshing later)");
-                    } else {
-                        statusLabel.setText("Media Error: " + currentMediaPlayer.getError().getMessage());
+                // Retry nếu là lỗi network/connection và chưa vượt quá số lần retry
+                boolean shouldRetry = (err.contains("ERROR_MEDIA_INVALID") || 
+                                      err.contains("UNKNOWN") || 
+                                      err.contains("NETWORK")) && 
+                                     retryCount < MAX_VIDEO_RETRIES;
+
+                if (shouldRetry) {
+                    System.out.println("[UI] Retrying video playback in 2 seconds... (Attempt " + (retryCount + 1) + "/" + MAX_VIDEO_RETRIES + ")");
+                    if (nowPlayingLabel != null) {
+                        nowPlayingLabel.setText("Retrying... (" + (retryCount + 1) + "/" + MAX_VIDEO_RETRIES + ")");
+                        nowPlayingLabel.setStyle("-fx-text-fill: #f39c12;");
+                    }
+                    
+                    // Retry sau 2 giây
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(2000);
+                            javafx.application.Platform.runLater(() -> {
+                                playVideoStream(streamUrl, fileName, retryCount + 1);
+                            });
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }).start();
+                } else {
+                    // Không thể retry nữa hoặc lỗi nghiêm trọng
+                    if (statusLabel != null) {
+                        if (retryCount >= MAX_VIDEO_RETRIES) {
+                            statusLabel.setText("⚠️ Failed to load video after " + MAX_VIDEO_RETRIES + " attempts. Server may not be ready.");
+                        } else if (err.contains("ERROR_MEDIA_INVALID") || err.contains("UNKNOWN")) {
+                            statusLabel.setText("⚠️ Loading Video... Please wait for pieces to download.");
+                        } else {
+                            statusLabel.setText("Media Error: " + (currentMediaPlayer.getError() != null ? currentMediaPlayer.getError().getMessage() : err));
+                        }
+                    }
+                    if (nowPlayingLabel != null) {
+                        if (retryCount >= MAX_VIDEO_RETRIES) {
+                            nowPlayingLabel.setText("Playback failed: " + fileName);
+                            nowPlayingLabel.setStyle("-fx-text-fill: #e74c3c;");
+                        } else {
+                            nowPlayingLabel.setText("Buffering... (Please wait)");
+                            nowPlayingLabel.setStyle("-fx-text-fill: #f39c12;");
+                        }
                     }
                 }
             });
 
+            // Auto Play
+            currentMediaPlayer.setAutoPlay(true);
+
         } catch (Exception e) {
             System.err.println("Error initializing player: " + e.getMessage());
-            if (statusLabel != null)
-                statusLabel.setText("Player Error: Please ensure you have codecs installed.");
+            if (statusLabel != null) {
+                if (retryCount < MAX_VIDEO_RETRIES) {
+                    statusLabel.setText("Retrying player initialization...");
+                    // Retry sau 1 giây
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(1000);
+                            javafx.application.Platform.runLater(() -> {
+                                playVideoStream(streamUrl, fileName, retryCount + 1);
+                            });
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }).start();
+                } else {
+                    statusLabel.setText("Player Error: Please ensure you have codecs installed.");
+                }
+            }
         }
     }
 

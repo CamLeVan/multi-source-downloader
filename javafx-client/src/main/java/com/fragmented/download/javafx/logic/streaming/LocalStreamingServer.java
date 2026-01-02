@@ -118,6 +118,10 @@ public class LocalStreamingServer implements AutoCloseable {
         return "http://localhost:" + actualPort + "/stream/" + fileName;
     }
 
+    // Flag để track server đã sẵn sàng chưa
+    private volatile boolean isReady = false;
+    private final Object readyLock = new Object();
+
     /**
      * Khởi động server (Chạy trên thread riêng)
      */
@@ -125,9 +129,39 @@ public class LocalStreamingServer implements AutoCloseable {
         serverExecutor.submit(() -> {
             log.info("LocalStreamingServer starting on port {}", actualPort);
             server.start();
+            synchronized (readyLock) {
+                isReady = true;
+                readyLock.notifyAll();
+            }
             log.info("LocalStreamingServer started successfully on port {}", actualPort);
             System.out.println("📺 Streaming URL: " + getStreamingUrl());
         });
+    }
+
+    /**
+     * Đợi server sẵn sàng (timeout sau 5 giây)
+     * @return true nếu server đã sẵn sàng, false nếu timeout
+     */
+    public boolean waitUntilReady(long timeoutMs) {
+        synchronized (readyLock) {
+            if (isReady) {
+                return true;
+            }
+            try {
+                readyLock.wait(timeoutMs);
+                return isReady;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Kiểm tra server đã sẵn sàng chưa
+     */
+    public boolean isReady() {
+        return isReady;
     }
 
     @Override

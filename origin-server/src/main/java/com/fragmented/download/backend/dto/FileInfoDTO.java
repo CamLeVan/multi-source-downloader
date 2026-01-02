@@ -1,68 +1,20 @@
 package com.fragmented.download.backend.dto;
 
-import java.time.LocalDateTime;
-
 /**
- * DTO để trả về thông tin metadata của file
- * Dùng cho API /files/info
+ * @deprecated Use com.fragmented.download.core.model.FileInfoDTO instead
+ * This class is kept for backward compatibility only
+ * 
+ * This is now just an alias - all code should migrate to use
+ * com.fragmented.download.core.model.FileInfoDTO directly
  */
-public class FileInfoDTO {
-    private String fileName;
-    private long size; // bytes
-    private LocalDateTime lastModified;
-    private int mirrorsCount; // Số lượng mirrors có sẵn (hiện tại = 0, sẽ tính sau)
-    private boolean hasManifest;
-
+@Deprecated
+public class FileInfoDTO extends com.fragmented.download.core.model.FileInfoDTO {
     public FileInfoDTO() {
+        super();
     }
 
-    public FileInfoDTO(String fileName, long size, LocalDateTime lastModified, boolean hasManifest) {
-        this.fileName = fileName;
-        this.size = size;
-        this.lastModified = lastModified;
-        this.mirrorsCount = 0; // Default, sẽ tính sau
-        this.hasManifest = hasManifest;
-    }
-
-    // Getters and Setters
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public long getSize() {
-        return size;
-    }
-
-    public void setSize(long size) {
-        this.size = size;
-    }
-
-    public LocalDateTime getLastModified() {
-        return lastModified;
-    }
-
-    public void setLastModified(LocalDateTime lastModified) {
-        this.lastModified = lastModified;
-    }
-
-    public int getMirrorsCount() {
-        return mirrorsCount;
-    }
-
-    public void setMirrorsCount(int mirrorsCount) {
-        this.mirrorsCount = mirrorsCount;
-    }
-
-    public boolean isHasManifest() {
-        return hasManifest;
-    }
-
-    public void setHasManifest(boolean hasManifest) {
-        this.hasManifest = hasManifest;
+    public FileInfoDTO(String fileName, long size, java.time.LocalDateTime lastModified, boolean hasManifest) {
+        super(fileName, size, lastModified, hasManifest);
     }
 }
 

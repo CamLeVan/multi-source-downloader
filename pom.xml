@@ -22,6 +22,7 @@
         <module>javafx-client</module>
         <module>networking-core</module>
         <module>p2p-tracker</module>
+        <module>admin-client</module>
     </modules>
 
     <dependencyManagement>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.fragmented.download.admin.controller.DashboardController"
+      spacing="20"
+      styleClass="dashboard-container">
+    
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+    
+    <!-- Server Status Cards -->
+    <HBox spacing="20" alignment="CENTER">
+        <!-- Origin Server Stats -->
+        <VBox styleClass="stats-card" spacing="10" prefWidth="300">
+            <Label text="Origin Server" styleClass="stats-title"/>
+            <Label fx:id="originFilesLabel" text="Files: 0" styleClass="stats-value"/>
+            <Label fx:id="originSizeLabel" text="Size: 0 B" styleClass="stats-value"/>
+            <Label fx:id="originDiskLabel" text="Disk: 0% used" styleClass="stats-value"/>
+            <Button text="Refresh" onAction="#refreshOriginStats" styleClass="refresh-button"/>
+        </VBox>
+        
+        <!-- P2P Tracker Stats -->
+        <VBox styleClass="stats-card" spacing="10" prefWidth="300">
+            <Label text="P2P Tracker" styleClass="stats-title"/>
+            <Label fx:id="trackerFilesLabel" text="Active Files: 0" styleClass="stats-value"/>
+            <Label fx:id="trackerPeersLabel" text="Total Peers: 0" styleClass="stats-value"/>
+            <Label fx:id="trackerStatusLabel" text="Status: Online" styleClass="stats-value"/>
+            <Button text="Refresh" onAction="#refreshTrackerStats" styleClass="refresh-button"/>
+        </VBox>
+    </HBox>
+    
+    <!-- Overview Metrics Cards -->
+    <VBox spacing="15">
+        <Label text="Overview Metrics" styleClass="section-title"/>
+        <HBox spacing="15" alignment="CENTER">
+            <!-- Total Files Card -->
+            <VBox styleClass="metric-card" spacing="5" prefWidth="200">
+                <Label text="📁" styleClass="metric-icon"/>
+                <Label text="TOTAL FILES" styleClass="metric-label"/>
+                <Label fx:id="totalFilesCard" text="0" styleClass="metric-value"/>
+                <Label fx:id="totalFilesSubtext" text="On Origin Server" styleClass="metric-subtext"/>
+            </VBox>
+            
+            <!-- Active Peers Card -->
+            <VBox styleClass="metric-card" spacing="5" prefWidth="200">
+                <Label text="👥" styleClass="metric-icon"/>
+                <Label text="ACTIVE PEERS" styleClass="metric-label"/>
+                <Label fx:id="activePeersCard" text="0" styleClass="metric-value"/>
+                <Label fx:id="activePeersSubtext" text="Connected" styleClass="metric-subtext"/>
+            </VBox>
+            
+            <!-- Storage Used Card -->
+            <VBox styleClass="metric-card" spacing="5" prefWidth="200">
+                <Label text="💾" styleClass="metric-icon"/>
+                <Label text="STORAGE USED" styleClass="metric-label"/>
+                <Label fx:id="storageUsedCard" text="0 B" styleClass="metric-value"/>
+                <Label fx:id="storageUsedSubtext" text="0% of total" styleClass="metric-subtext"/>
+            </VBox>
+            
+            <!-- Active Swarms Card -->
+            <VBox styleClass="metric-card" spacing="5" prefWidth="200">
+                <Label text="🌐" styleClass="metric-icon"/>
+                <Label text="ACTIVE SWARMS" styleClass="metric-label"/>
+                <Label fx:id="activeSwarmsCard" text="0" styleClass="metric-value"/>
+                <Label fx:id="activeSwarmsSubtext" text="Files being shared" styleClass="metric-subtext"/>
+            </VBox>
+        </HBox>
+    </VBox>
+    
+    <!-- System Info -->
+    <VBox styleClass="info-box" spacing="10">
+        <Label text="System Information" styleClass="section-title"/>
+        <Label fx:id="systemInfoLabel" text="Loading..." styleClass="info-text"/>
+    </VBox>
+    
+</VBox>
+

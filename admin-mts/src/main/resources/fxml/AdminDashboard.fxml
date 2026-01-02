@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.fragmented.download.admin.controller.AdminDashboardController"
+            stylesheets="@../styles/admin.css">
+    
+    <top>
+        <HBox styleClass="header-box" spacing="20" alignment="CENTER_LEFT">
+            <Label text="🚀 Multi-Source Downloader" styleClass="header-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="statusLabel" text="Ready" styleClass="status-label"/>
+        </HBox>
+    </top>
+    
+    <center>
+        <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE">
+            <!-- Dashboard Tab -->
+            <Tab text="📊 Dashboard" fx:id="dashboardTab">
+                <fx:include source="DashboardTab.fxml"/>
+            </Tab>
+            
+            <!-- File Management Tab -->
+            <Tab text="📁 File Management" fx:id="filesTab">
+                <fx:include source="FileManagementTab.fxml"/>
+            </Tab>
+            
+            <!-- Peer Monitoring Tab -->
+            <Tab text="👥 Peer Monitoring" fx:id="peersTab">
+                <fx:include source="PeerMonitoringTab.fxml"/>
+            </Tab>
+            
+            <!-- Statistics Tab -->
+            <Tab text="📈 Statistics" fx:id="statisticsTab">
+                <fx:include source="StatisticsTab.fxml"/>
+            </Tab>
+        </TabPane>
+    </center>
+    
+</BorderPane>
+

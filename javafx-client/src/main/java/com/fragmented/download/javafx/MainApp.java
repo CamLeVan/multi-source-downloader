@@ -190,9 +190,17 @@ public class MainApp extends Application {
                     peerServer.start();
 
                     peerPort = peerServer.getActualPort();
+                    
+                    // Đợi server sẵn sàng trước khi announce (tối đa 5 giây)
+                    boolean serverReady = peerServer.waitUntilReady(5000);
+                    if (!serverReady) {
+                        FlowLogger.logError("PeerServer may not be ready yet", localIP, "Timeout waiting for server");
+                        System.err.println("⚠️ WARNING: PeerServer may not be ready yet. P2P sharing might not work properly.");
+                    }
+                    
                     FlowLogger.logInfo("Peer Server started on " + localIP + ":" + peerPort, localIP);
 
-                    // Announce với tracker sau khi PeerServer đã start
+                    // Announce với tracker sau khi PeerServer đã start và sẵn sàng
                     String[] peerParts = (localIP + ":" + peerPort).split(":");
                     FlowLogger.logStep(step++, "Announcing to Tracker", peerParts[0], Integer.parseInt(peerParts[1]),
                             extractIPFromUrl(TRACKER_URL), 8081);
@@ -267,7 +275,7 @@ public class MainApp extends Application {
             applyMetadataFirstStrategy(scheduler, manifest);
 
             // 14. Periodically refresh peer list (background thread)
-            startPeerRefreshThread(fileId);
+            startPeerRefreshThread(fileId, manifest);
 
         } catch (IOException e) {
             String errorMsg = "Download failed: " + e.getMessage();
@@ -330,13 +338,12 @@ public class MainApp extends Application {
             List<String> sources = new ArrayList<>(piece.getSources());
 
             // Thêm peer URLs vào sources (format: http://ip:port/piece/fileId/pieceId)
+            String selfAddress = localIP + ":" + peerPort; // Format chuẩn để so sánh
             for (String peerAddress : peers) {
-                // Tránh thêm chính mình
-                if (peerServer != null) {
-
-                    if (peerAddress.contains(localIP) && peerAddress.contains(String.valueOf(peerPort))) {
-                        continue;
-                    }
+                // Tránh thêm chính mình - so sánh exact match
+                if (peerAddress.equals(selfAddress)) {
+                    FlowLogger.logInfo("Skipping self peer: " + peerAddress, localIP);
+                    continue;
                 }
 
                 // Tạo peer URL cho piece này
@@ -378,9 +385,9 @@ public class MainApp extends Application {
     }
 
     /**
-     * Background thread để refresh peer list định kỳ
+     * Background thread để refresh peer list định kỳ và re-enrich manifest
      */
-    private void startPeerRefreshThread(String fileId) {
+    private void startPeerRefreshThread(String fileId, ManifestModel manifest) {
         Thread refreshThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
@@ -390,11 +397,16 @@ public class MainApp extends Application {
                     if (peerServer != null && trackerClient != null) {
                         FlowLogger.logInfo("Refreshing peer list and re-announcing", localIP);
                         trackerClient.announce(fileId, peerId, peerServer.getActualPort());
-                        // Note: enrichManifestWithPeers needs manifest, will be called on next download
+                        
+                        // Re-enrich manifest với peers mới (quan trọng để nhận peers mới join)
+                        enrichManifestWithPeers(manifest, fileId);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
+                } catch (Exception e) {
+                    System.err.println("Error in peer refresh thread: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
         });
@@ -486,22 +498,35 @@ public class MainApp extends Application {
 
                 server.start();
 
+                // Đợi server sẵn sàng (tối đa 5 giây)
+                boolean serverReady = server.waitUntilReady(5000);
+                if (!serverReady) {
+                    System.err.println("⚠️ WARNING: Streaming server may not be ready yet. Playback might fail.");
+                }
+
                 // Update task with streaming URL
+                final String streamUrl = server.getStreamingUrl();
                 javafx.application.Platform.runLater(() -> {
-                    task.setStreamingUrl(server.getStreamingUrl());
+                    task.setStreamingUrl(streamUrl);
                 });
 
                 System.out.println("✅ Local Streaming Server started!");
-                System.out.println("📺 Streaming URL: " + server.getStreamingUrl());
+                System.out.println("📺 Streaming URL: " + streamUrl);
                 System.out.println("💡 You can open this URL in:");
                 System.out.println("   - Video players (VLC, MPV, etc.)");
                 System.out.println("   - Web browsers (for download)");
                 System.out.println("   - Any HTTP client");
                 System.out.println("   - File will be downloaded on-demand when accessed");
 
-                // Notify UI to play video directly
-                if (dashboardController != null) {
-                    final String streamUrl = server.getStreamingUrl();
+                // Notify UI to play video directly (chỉ với MP4)
+                if (dashboardController != null && fileId.toLowerCase().endsWith(".mp4")) {
+                    // Thêm một chút delay để đảm bảo server hoàn toàn sẵn sàng
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    
                     javafx.application.Platform.runLater(() -> {
                         dashboardController.playVideoStream(streamUrl, fileId);
                         dashboardController.updateVideoProgress(task);

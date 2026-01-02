@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.fragmented.download.admin.controller.FileManagementController"
+      spacing="15"
+      styleClass="file-management-container">
+    
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+    
+    <!-- Toolbar -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="➕ Upload File" onAction="#handleUpload" styleClass="action-button"/>
+        <Button text="🔄 Refresh" onAction="#refreshFiles" styleClass="action-button"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="statusLabel" text="Ready" styleClass="status-text"/>
+    </HBox>
+    
+    <!-- Files Table -->
+    <TableView fx:id="filesTable" styleClass="files-table">
+        <columns>
+            <TableColumn fx:id="fileNameColumn" text="File Name" prefWidth="400"/>
+            <TableColumn fx:id="sizeColumn" text="Size" prefWidth="150"/>
+            <TableColumn fx:id="lastModifiedColumn" text="Last Modified" prefWidth="200"/>
+            <TableColumn fx:id="manifestColumn" text="Manifest" prefWidth="100"/>
+            <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="250"/>
+        </columns>
+    </TableView>
+    
+</VBox>
+

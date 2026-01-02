@@ -1,7 +1,7 @@
 package com.fragmented.download.backend.controller;
 
 import com.fragmented.download.backend.config.FileServerInitializer;
-import com.fragmented.download.backend.dto.FileInfoDTO;
+import com.fragmented.download.core.model.FileInfoDTO;
 import com.fragmented.download.core.model.ManifestModel;
 import com.google.gson.Gson;
 import org.springframework.core.io.InputStreamResource;

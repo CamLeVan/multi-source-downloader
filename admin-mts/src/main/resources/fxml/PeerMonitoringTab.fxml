@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.fragmented.download.admin.controller.PeerMonitoringController"
+      spacing="15"
+      styleClass="peer-monitoring-container">
+    
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+    
+    <!-- Toolbar -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="🔄 Refresh" onAction="#refreshSwarms" styleClass="action-button"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="statusLabel" text="Ready" styleClass="status-text"/>
+    </HBox>
+    
+    <!-- Swarms Table -->
+    <TableView fx:id="swarmsTable" styleClass="swarms-table">
+        <columns>
+            <TableColumn fx:id="fileIdColumn" text="File ID" prefWidth="400"/>
+            <TableColumn fx:id="seedersColumn" text="Seeders" prefWidth="100"/>
+            <TableColumn fx:id="peersColumn" text="Peers" prefWidth="300"/>
+            <TableColumn fx:id="healthColumn" text="Health" prefWidth="150"/>
+            <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="200"/>
+        </columns>
+    </TableView>
+    
+</VBox>
+

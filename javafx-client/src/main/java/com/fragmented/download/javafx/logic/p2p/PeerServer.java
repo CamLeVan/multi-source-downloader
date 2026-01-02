@@ -21,6 +21,10 @@ public class PeerServer implements AutoCloseable {
     private final HttpServer server;
     private final int actualPort; // Port actually used (may differ from DEFAULT_PORT if conflict)
     private final ExecutorService serverExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "peer-server-thread"));
+    
+    // Flag để track server đã sẵn sàng chưa
+    private volatile boolean isReady = false;
+    private final Object readyLock = new Object();
 
     public PeerServer(IStateStorage stateStorage, PieceStorage pieceStorage, ManifestModel manifest, String fileId, String localFilePath) throws IOException {
         // Improvement: Port conflict handling - try multiple ports if DEFAULT_PORT is busy
@@ -79,8 +83,38 @@ public class PeerServer implements AutoCloseable {
         serverExecutor.submit(() -> {
             log.info("PeerServer starting on port {}", actualPort);
             server.start();
+            synchronized (readyLock) {
+                isReady = true;
+                readyLock.notifyAll();
+            }
             log.info("PeerServer started successfully on port {}", actualPort);
         });
+    }
+    
+    /**
+     * Đợi server sẵn sàng (timeout sau 5 giây)
+     * @return true nếu server đã sẵn sàng, false nếu timeout
+     */
+    public boolean waitUntilReady(long timeoutMs) {
+        synchronized (readyLock) {
+            if (isReady) {
+                return true;
+            }
+            try {
+                readyLock.wait(timeoutMs);
+                return isReady;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+    }
+    
+    /**
+     * Kiểm tra server đã sẵn sàng chưa
+     */
+    public boolean isReady() {
+        return isReady;
     }
 
     @Override
