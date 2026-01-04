@@ -159,7 +159,21 @@ public class MainApp extends Application {
 
             // 2. Define file identifiers and paths
             String fileId = manifestUrl.substring(manifestUrl.lastIndexOf('/') + 1);
-            String localFilePath = Paths.get(System.getProperty("user.home"), "Downloads", fileId).toString();
+
+            // USER REQUEST: Change download directory to D:\Downloads
+            String downloadDir = "D:\\Downloads";
+            try {
+                java.nio.file.Path path = java.nio.file.Paths.get(downloadDir);
+                if (!java.nio.file.Files.exists(path)) {
+                    java.nio.file.Files.createDirectories(path);
+                }
+            } catch (Exception e) {
+                // Fallback to user home if D:\ cannot be created/accessed
+                System.err.println("Failed to use D:\\Downloads, falling back to User Home.");
+                downloadDir = Paths.get(System.getProperty("user.home"), "Downloads").toString();
+            }
+
+            String localFilePath = Paths.get(downloadDir, fileId).toString();
             FlowLogger.logInfo("File ID: " + fileId + ", Local path: " + localFilePath, localIP);
 
             // 3. Initialize TrackerClient (only once)
@@ -190,14 +204,15 @@ public class MainApp extends Application {
                     peerServer.start();
 
                     peerPort = peerServer.getActualPort();
-                    
+
                     // Đợi server sẵn sàng trước khi announce (tối đa 5 giây)
                     boolean serverReady = peerServer.waitUntilReady(5000);
                     if (!serverReady) {
                         FlowLogger.logError("PeerServer may not be ready yet", localIP, "Timeout waiting for server");
-                        System.err.println("⚠️ WARNING: PeerServer may not be ready yet. P2P sharing might not work properly.");
+                        System.err.println(
+                                "⚠️ WARNING: PeerServer may not be ready yet. P2P sharing might not work properly.");
                     }
-                    
+
                     FlowLogger.logInfo("Peer Server started on " + localIP + ":" + peerPort, localIP);
 
                     // Announce với tracker sau khi PeerServer đã start và sẵn sàng
@@ -342,12 +357,25 @@ public class MainApp extends Application {
             for (String peerAddress : peers) {
                 // Tránh thêm chính mình - so sánh exact match
                 if (peerAddress.equals(selfAddress)) {
-                    FlowLogger.logInfo("Skipping self peer: " + peerAddress, localIP);
+                    // FlowLogger.logInfo("Skipping self peer: " + peerAddress, localIP);
                     continue;
                 }
 
-                // Tạo peer URL cho piece này
-                String peerUrl = "http://" + peerAddress + "/piece/" + fileId + "/" + piece.getId();
+                // Check for localhost/127.0.0.1 variation of self
+                if ((peerAddress.startsWith("127.0.0.1") || peerAddress.startsWith("localhost"))
+                        && peerAddress.endsWith(":" + peerPort)) {
+                    continue;
+                }
+
+                // Encode fileId in URL to ensure it matches browser standard
+                String encodedFileId = fileId.replace(" ", "%20");
+
+                // Tạo peer URL cho piece này (Encoding fileId properly)
+                String peerUrl = "http://" + peerAddress + "/piece/" + encodedFileId + "/" + piece.getId();
+
+                // DEBUG: Print comparison
+                // System.out.println("Checking PeerURL: " + peerUrl);
+
                 if (!sources.contains(peerUrl)) {
                     sources.add(peerUrl);
                     peerCount++;
@@ -397,7 +425,7 @@ public class MainApp extends Application {
                     if (peerServer != null && trackerClient != null) {
                         FlowLogger.logInfo("Refreshing peer list and re-announcing", localIP);
                         trackerClient.announce(fileId, peerId, peerServer.getActualPort());
-                        
+
                         // Re-enrich manifest với peers mới (quan trọng để nhận peers mới join)
                         enrichManifestWithPeers(manifest, fileId);
                     }
@@ -526,7 +554,7 @@ public class MainApp extends Application {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
-                    
+
                     javafx.application.Platform.runLater(() -> {
                         dashboardController.playVideoStream(streamUrl, fileId);
                         dashboardController.updateVideoProgress(task);

@@ -94,8 +94,9 @@ public class LocalStreamingServer implements AutoCloseable {
         this.server = createdServer;
         this.actualPort = portUsed;
 
-        // Create context for file streaming
-        this.server.createContext("/stream/" + fileName, new StreamingHandler());
+        // Create context for file streaming (generic handler for all requests under
+        // /stream/)
+        this.server.createContext("/stream/", new StreamingHandler());
 
         // Health check endpoint
         this.server.createContext("/health", exchange -> {
@@ -115,7 +116,16 @@ public class LocalStreamingServer implements AutoCloseable {
     }
 
     public String getStreamingUrl() {
-        return "http://localhost:" + actualPort + "/stream/" + fileName;
+        try {
+            // Encode file name to handle spaces and special characters
+            String encodedName = java.net.URLEncoder
+                    .encode(fileName, java.nio.charset.StandardCharsets.UTF_8.toString())
+                    .replace("+", "%20"); // Configurable: standard URLEncoder uses + for spaces, but URI prefers %20
+            return "http://localhost:" + actualPort + "/stream/" + encodedName;
+        } catch (Exception e) {
+            // Fallback for unlikely encoding error
+            return "http://localhost:" + actualPort + "/stream/" + fileName;
+        }
     }
 
     // Flag để track server đã sẵn sàng chưa
@@ -140,6 +150,7 @@ public class LocalStreamingServer implements AutoCloseable {
 
     /**
      * Đợi server sẵn sàng (timeout sau 5 giây)
+     * 
      * @return true nếu server đã sẵn sàng, false nếu timeout
      */
     public boolean waitUntilReady(long timeoutMs) {
