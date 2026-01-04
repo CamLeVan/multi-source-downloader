@@ -54,15 +54,21 @@ public class OkHttpDownloadClient implements DownloadClient {
 
         // Nếu đã thử hết các nguồn (origin, mirror, peers)
         if (sourceIndex >= piece.getSources().size()) {
-            future.completeExceptionally(new IOException("Failed to download piece " + piece.getId() + " from all available sources."));
+            future.completeExceptionally(
+                    new IOException("Failed to download piece " + piece.getId() + " from all available sources."));
             return;
         }
 
         String sourceUrl = piece.getSources().get(sourceIndex);
+        // Log which source is being attempted
+        System.out.println("[DOWNLOAD] Piece " + piece.getId() + " | Trying Source " + (sourceIndex + 1) + "/"
+                + piece.getSources().size() + ": " + sourceUrl);
+
         long start = (long) piece.getId() * pieceSize;
 
         if (start >= fileSize) {
-            future.completeExceptionally(new IOException("Invalid piece offset for piece " + piece.getId() + ". Start exceeds file size."));
+            future.completeExceptionally(
+                    new IOException("Invalid piece offset for piece " + piece.getId() + ". Start exceeds file size."));
             return;
         }
 
@@ -81,7 +87,8 @@ public class OkHttpDownloadClient implements DownloadClient {
     /**
      * Thực thi request với logic "Thử lại" (Retry).
      */
-    private void executeWithRetry(Request request, int retryCount, PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
+    private void executeWithRetry(Request request, int retryCount, PieceModel piece, int sourceIndex,
+            CompletableFuture<byte[]> future) {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
@@ -98,19 +105,20 @@ public class OkHttpDownloadClient implements DownloadClient {
                     try (ResponseBody body = response.body()) {
                         Objects.requireNonNull(body, "Response body is null");
                         byte[] data = body.bytes();
-                        
+
                         // Measure metrics
                         long endTime = System.nanoTime();
                         long durationNs = endTime - startTime;
                         long durationMs = durationNs / 1_000_000;
                         double speedKBps = (data.length / 1024.0) / (durationMs / 1000.0);
-                        
+
                         // Create metrics object
                         NetworkMetrics metrics = new NetworkMetrics(durationMs, speedKBps, 0.0, true);
-                        
+
                         // AI Check: Is this connection anomalous?
                         if (smartDetector.isAnomaly(metrics)) {
-                            System.err.println("⚠ SmartDetector: Connection to " + call.request().url() + " is anomalous! Switching source...");
+                            System.err.println("⚠ SmartDetector: Connection to " + call.request().url()
+                                    + " is anomalous! Switching source...");
                             // Treat as failure to trigger fallback
                             response.close();
                             tryPieceFromSource(piece, sourceIndex + 1, future);
@@ -127,7 +135,8 @@ public class OkHttpDownloadClient implements DownloadClient {
                 // 2. Lỗi có thể "Thử lại" (Backoff)
                 // (Lỗi Server 5xx, Timeout 408, Quá tải 429)
                 if (response.code() >= 500 || response.code() == 408 || response.code() == 429) {
-                    handleFailure(call, new IOException("Retryable HTTP Error: " + response.code()), retryCount, piece, sourceIndex, future);
+                    handleFailure(call, new IOException("Retryable HTTP Error: " + response.code()), retryCount, piece,
+                            sourceIndex, future);
                     response.close();
                     return;
                 }
@@ -135,7 +144,8 @@ public class OkHttpDownloadClient implements DownloadClient {
                 // 3. Lỗi nghiêm trọng, "Thất bại" (Fail fast)
                 // (Client gửi Range sai, không thể phục hồi)
                 if (response.code() == 416) {
-                    future.completeExceptionally(new IOException("Invalid Range requested (416). Failing piece " + piece.getId()));
+                    future.completeExceptionally(
+                            new IOException("Invalid Range requested (416). Failing piece " + piece.getId()));
                     response.close();
                     return;
                 }
@@ -143,7 +153,8 @@ public class OkHttpDownloadClient implements DownloadClient {
                 // 4. Các lỗi 4xx khác -> "Bỏ qua" (Fallback)
                 // (Ví dụ: 404 Peer chưa có mảnh, 403 Cấm)
                 // Coi là nguồn này không hợp lệ -> Thử nguồn tiếp theo.
-                System.err.println("Unrecoverable error for " + request.url() + ": " + response.code() + ". Trying next source.");
+                System.err.println(
+                        "Unrecoverable error for " + request.url() + ": " + response.code() + ". Trying next source.");
                 response.close();
                 tryPieceFromSource(piece, sourceIndex + 1, future);
             }
@@ -153,18 +164,22 @@ public class OkHttpDownloadClient implements DownloadClient {
     /**
      * Logic "Backoff": Xử lý khi thất bại, quyết định thử lại hoặc bỏ qua.
      */
-    private void handleFailure(Call call, IOException e, int retryCount, PieceModel piece, int sourceIndex, CompletableFuture<byte[]> future) {
+    private void handleFailure(Call call, IOException e, int retryCount, PieceModel piece, int sourceIndex,
+            CompletableFuture<byte[]> future) {
 
         if (retryCount < MAX_RETRIES) {
             // Tính toán thời gian chờ (1s, 2s, 4s, 8s, 16s)
             long delayMs = (long) (Math.pow(2, retryCount) * INITIAL_BACKOFF_MS);
-            System.err.println("Retrying piece " + piece.getId() + " from " + call.request().url() + " in " + delayMs + " ms. Attempt " + (retryCount + 1) + "/" + MAX_RETRIES + ". Error: " + e.getMessage());
+            System.err.println("Retrying piece " + piece.getId() + " from " + call.request().url() + " in " + delayMs
+                    + " ms. Attempt " + (retryCount + 1) + "/" + MAX_RETRIES + ". Error: " + e.getMessage());
 
             // Lên lịch thử lại
             scheduler.schedule(() -> {
                 executeWithRetry(call.request(), retryCount + 1, piece, sourceIndex, future);
             }, delayMs, TimeUnit.MILLISECONDS);
-        } else {
+        } else
+
+        {
             // Hết số lần thử lại cho nguồn này -> Thử nguồn tiếp theo (Fallback)
             System.err.println("Max retries reached for " + call.request().url() + ". Trying next source.");
             tryPieceFromSource(piece, sourceIndex + 1, future);

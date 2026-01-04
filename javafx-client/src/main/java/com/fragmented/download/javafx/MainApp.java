@@ -354,10 +354,10 @@ public class MainApp extends Application {
 
             // Thêm peer URLs vào sources (format: http://ip:port/piece/fileId/pieceId)
             String selfAddress = localIP + ":" + peerPort; // Format chuẩn để so sánh
+
             for (String peerAddress : peers) {
                 // Tránh thêm chính mình - so sánh exact match
                 if (peerAddress.equals(selfAddress)) {
-                    // FlowLogger.logInfo("Skipping self peer: " + peerAddress, localIP);
                     continue;
                 }
 
@@ -372,9 +372,6 @@ public class MainApp extends Application {
 
                 // Tạo peer URL cho piece này (Encoding fileId properly)
                 String peerUrl = "http://" + peerAddress + "/piece/" + encodedFileId + "/" + piece.getId();
-
-                // DEBUG: Print comparison
-                // System.out.println("Checking PeerURL: " + peerUrl);
 
                 if (!sources.contains(peerUrl)) {
                     sources.add(peerUrl);
