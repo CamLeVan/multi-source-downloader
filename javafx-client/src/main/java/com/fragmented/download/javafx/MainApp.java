@@ -356,12 +356,19 @@ public class MainApp extends Application {
             for (String peerAddress : peers) {
                 // Tránh thêm chính mình - so sánh exact match
                 if (peerAddress.equals(selfAddress)) {
+                    // Only log detail for first piece to avoid spam
+                    if (piece.getId() == 0) {
+                        FlowLogger.logInfo("  -> Rejecting Peer (Self): " + peerAddress, localIP);
+                    }
                     continue;
                 }
 
                 // Check for localhost/127.0.0.1 variation of self
                 if ((peerAddress.startsWith("127.0.0.1") || peerAddress.startsWith("localhost"))
                         && peerAddress.endsWith(":" + peerPort)) {
+                    if (piece.getId() == 0) {
+                        FlowLogger.logInfo("  -> Rejecting Peer (Localhost variation): " + peerAddress, localIP);
+                    }
                     continue;
                 }
 
@@ -374,6 +381,10 @@ public class MainApp extends Application {
                 if (!sources.contains(peerUrl)) {
                     sources.add(peerUrl);
                     peerCount++;
+                    // Chỉ log 1 lần cho piece đầu tiên để tránh spam log
+                    if (piece.getId() == 0) {
+                        FlowLogger.logInfo("  -> Accepted Peer: " + peerAddress + " -> " + peerUrl, localIP);
+                    }
                 }
             }
 
