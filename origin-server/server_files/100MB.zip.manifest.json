@@ -7,7 +7,7 @@
       "sha256": "7368e4368a8c158263cff0271d6491f66d05edda77dfbe4b9ac3ad818a893bfb",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -15,7 +15,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -23,7 +23,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -31,7 +31,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -39,7 +39,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -47,7 +47,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -55,7 +55,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -63,7 +63,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -71,7 +71,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -79,7 +79,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -87,7 +87,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -95,7 +95,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -103,7 +103,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -111,7 +111,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -119,7 +119,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -127,7 +127,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -135,7 +135,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -143,7 +143,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -151,7 +151,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -159,7 +159,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -167,7 +167,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -175,7 +175,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -183,7 +183,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -191,7 +191,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -199,7 +199,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -207,7 +207,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -215,7 +215,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -223,7 +223,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -231,7 +231,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -239,7 +239,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -247,7 +247,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -255,7 +255,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -263,7 +263,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -271,7 +271,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -279,7 +279,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -287,7 +287,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -295,7 +295,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -303,7 +303,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -311,7 +311,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -319,7 +319,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -327,7 +327,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -335,7 +335,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -343,7 +343,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -351,7 +351,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -359,7 +359,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -367,7 +367,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -375,7 +375,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -383,7 +383,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -391,7 +391,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -399,7 +399,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -407,7 +407,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -415,7 +415,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -423,7 +423,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -431,7 +431,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -439,7 +439,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -447,7 +447,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -455,7 +455,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -463,7 +463,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -471,7 +471,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -479,7 +479,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -487,7 +487,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -495,7 +495,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -503,7 +503,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -511,7 +511,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -519,7 +519,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -527,7 +527,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -535,7 +535,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -543,7 +543,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -551,7 +551,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -559,7 +559,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -567,7 +567,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -575,7 +575,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -583,7 +583,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -591,7 +591,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -599,7 +599,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -607,7 +607,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -615,7 +615,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -623,7 +623,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -631,7 +631,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -639,7 +639,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -647,7 +647,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -655,7 +655,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -663,7 +663,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -671,7 +671,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -679,7 +679,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -687,7 +687,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -695,7 +695,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -703,7 +703,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -711,7 +711,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -719,7 +719,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -727,7 +727,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -735,7 +735,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -743,7 +743,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -751,7 +751,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -759,7 +759,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -767,7 +767,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -775,7 +775,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -783,7 +783,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -791,7 +791,7 @@
       "sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     },
     {
@@ -799,7 +799,7 @@
       "sha256": "aac43d301939ccab877100be2ed05183c63e470b6f3602c8408a8925803fc576",
       "sources": [
         "http://localhost:8080/files/100MB.zip",
-        "http://mirror.vku.udn.vn/100MB.zip"
+        "http://192.168.1.7:8082/files/100MB.zip"
       ]
     }
   ]

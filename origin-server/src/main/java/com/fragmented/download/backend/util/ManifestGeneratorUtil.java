@@ -25,10 +25,11 @@ public class ManifestGeneratorUtil {
         File manifestFile = new File(sourceFile.getParent(), manifestFileName);
 
         // Do not regenerate if the manifest already exists.
-        if (manifestFile.exists()) {
-            System.out.println("Manifest file already exists: " + manifestFile.getAbsolutePath());
-            return;
-        }
+        // if (manifestFile.exists()) {
+        // System.out.println("Manifest file already exists: " +
+        // manifestFile.getAbsolutePath());
+        // // return;
+        // }
 
         System.out.println("Generating manifest for: " + sourceFile.getAbsolutePath());
 
@@ -43,7 +44,7 @@ public class ManifestGeneratorUtil {
             for (int i = 0; i < numberOfPieces; i++) {
                 sha256.reset();
                 long pieceBytesRead = 0;
-                
+
                 // Create a bounded input stream to read only one piece
                 InputStream boundedIs = new BoundedInputStream(is, PIECE_SIZE);
                 DigestInputStream dis = new DigestInputStream(boundedIs, sha256);
@@ -58,7 +59,7 @@ public class ManifestGeneratorUtil {
                 // The origin and mirror sources are added here.
                 List<String> sources = List.of(
                         "http://localhost:8080/files/" + sourceFile.getName(), // Origin
-                        "http://mirror.vku.udn.vn/" + sourceFile.getName()      // Mirror
+                        "http://192.168.1.7:8082/files/" + sourceFile.getName() // Mirror (Fake Internal)
                 );
                 pieces.add(new PieceModel(i, hexHash, sources));
 

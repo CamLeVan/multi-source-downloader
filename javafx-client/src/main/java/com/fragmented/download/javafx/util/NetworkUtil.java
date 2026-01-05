@@ -23,7 +23,15 @@ public class NetworkUtil {
                 NetworkInterface networkInterface = interfaces.nextElement();
 
                 // Bỏ qua loopback và disabled interfaces
+                // CẬP NHẬT: Bỏ qua các interface ảo của VirtualBox/VMware/Docker
                 if (networkInterface.isLoopback() || !networkInterface.isUp()) {
+                    continue;
+                }
+
+                String name = networkInterface.getDisplayName().toLowerCase();
+                // Skip virtual adapters to find real LAN IP
+                if (name.contains("virtual") || name.contains("wsl") || name.contains("docker")
+                        || name.contains("vmware") || name.contains("vbox") || name.contains("pseudo")) {
                     continue;
                 }
 
@@ -44,6 +52,8 @@ public class NetworkUtil {
             }
 
             // Vòng 2: Fallback (nếu không tìm thấy SiteLocal, lấy IP đầu tiên hợp lệ)
+            // Lưu ý: Vòng này vẫn nên tránh virtual nến possible, nhưng giữ simple như cũ
+            // để đảm bảo có IP
             interfaces = NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 NetworkInterface networkInterface = interfaces.nextElement();
