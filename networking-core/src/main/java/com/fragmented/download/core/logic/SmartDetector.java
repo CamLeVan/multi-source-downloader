@@ -110,6 +110,14 @@ public class SmartDetector {
             decisionSource = "RULE_BASED";
         }
 
+        // AUTO-CORRECT: If speed is good (> 100 KB/s), ignore Anomaly prediction.
+        // Peer P2P often has high latency but acceptable throughput.
+        if (isAnomaly && metrics.getDownloadSpeedKBps() > 100.0) {
+            System.out.println("[SmartDetector] Override: Ignoring Anomaly because Speed "
+                    + metrics.getDownloadSpeedKBps() + " KB/s is good.");
+            isAnomaly = false;
+        }
+
         // Console Alert for Anomaly
         if (isAnomaly) {
             System.out.println("⚠ Anomaly Detected (" + decisionSource + "): "

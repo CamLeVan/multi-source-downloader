@@ -160,17 +160,15 @@ public class MainApp extends Application {
             // 2. Define file identifiers and paths
             String fileId = manifestUrl.substring(manifestUrl.lastIndexOf('/') + 1);
 
-            // USER REQUEST: Change download directory to D:\Downloads
-            String downloadDir = "D:\\Downloads";
+            // Use system default Downloads folder (Compatible with Windows/Linux/Mac)
+            String downloadDir = Paths.get(System.getProperty("user.home"), "Downloads").toString();
             try {
                 java.nio.file.Path path = java.nio.file.Paths.get(downloadDir);
                 if (!java.nio.file.Files.exists(path)) {
                     java.nio.file.Files.createDirectories(path);
                 }
             } catch (Exception e) {
-                // Fallback to user home if D:\ cannot be created/accessed
-                System.err.println("Failed to use D:\\Downloads, falling back to User Home.");
-                downloadDir = Paths.get(System.getProperty("user.home"), "Downloads").toString();
+                System.err.println("Failed to create download directory: " + e.getMessage());
             }
 
             String localFilePath = Paths.get(downloadDir, fileId).toString();

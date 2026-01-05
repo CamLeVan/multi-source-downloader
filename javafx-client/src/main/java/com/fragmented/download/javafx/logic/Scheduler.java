@@ -181,6 +181,18 @@ public class Scheduler {
                                     piece.getId(), downloadedFrom, data.length / 1024, totalDownloaded / 1024 / 1024));
                         }, retryCallback).join(); // BLOCK until finished!
 
+                        // 3.5 Check if download actually succeeded. If not, re-queue (Robustness fix)
+                        if (!downloadState.isPieceCompleted(piece.getId())) {
+                            System.err.println(String.format("Piece %d failed from all sources. Re-queuing in 2s...",
+                                    piece.getId()));
+                            try {
+                                Thread.sleep(2000); // Wait before re-trying to avoid busy loop
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                            }
+                            pieceQueue.offer(piece);
+                        }
+
                     } catch (Exception e) {
                         // Logged in worker
                     } finally {

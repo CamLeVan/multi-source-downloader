@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 public class OkHttpDownloadClient implements DownloadClient {
 
-    private static final int MAX_RETRIES = 5;
+    private static final int MAX_RETRIES = 2;
     private static final long INITIAL_BACKOFF_MS = 1000;
 
     private final OkHttpClient httpClient;
