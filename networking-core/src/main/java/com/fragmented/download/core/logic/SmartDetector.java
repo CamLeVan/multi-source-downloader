@@ -22,8 +22,8 @@ import java.util.ArrayList;
 public class SmartDetector {
 
     // Thresholds (Fallback Rules)
-    private static final long MAX_LATENCY_MS = 2000; // 2 seconds
-    private static final double MIN_SPEED_KBPS = 50.0; // 50 KB/s
+    private static final long MAX_LATENCY_MS = 30000; // 30 seconds
+    private static final double MIN_SPEED_KBPS = 10.0; // 10 KB/s
 
     // AI Model
     private static final String MODEL_FILE = "network_anomaly_model.model";
@@ -98,7 +98,17 @@ public class SmartDetector {
                 String predictedLabel = dataStructure.classAttribute().value((int) prediction);
 
                 isAnomaly = "ANOMALY".equals(predictedLabel);
-                decisionSource = "AI_MODEL";
+
+                // Cập nhật: Nếu AI báo lỗi, nhưng thông số mạng thực tế vẫn NẰM TRONG GIỚI HẠN
+                // AN TOÀN của checkRules,
+                // Thì chúng ta sẽ DUNG TÚNG (Bỏ qua dự đoán của AI) để tránh sập luồng tải oan
+                // uổng.
+                if (isAnomaly && !checkRules(metrics)) {
+                    isAnomaly = false;
+                    decisionSource = "AI_TOLERANCE_MODE";
+                } else {
+                    decisionSource = "AI_MODEL";
+                }
             } catch (Exception e) {
                 System.err.println("[SmartDetector] AI Prediction Error: " + e.getMessage());
                 isAnomaly = checkRules(metrics); // Fallback to rules on error

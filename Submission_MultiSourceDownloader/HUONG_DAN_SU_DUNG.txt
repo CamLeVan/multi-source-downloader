@@ -1,0 +1,37 @@
+
+Yêu cầu hệ thống: Java 17 hoặc mới hơn (JDK 21 Recommended).
+
+
+BƯỚC 1: CHUẨN BỊ FILE
+
+- Copy các file Video vào thư mục: [files] nằm ngay cạnh file này.
+- Hệ thống Origin Server sẽ tự động quét và phục vụ các file trong thư mục này.
+
+
+BƯỚC 2: KHỞI CHẠY HỆ THỐNG 
+1. Chạy file [1_Run_Origin_Server.bat]:
+   - Đợi khoảng 10s cho đến khi thấy dòng: "Started OriginServerApplication"
+   - Server chứa file gốc sẽ chạy ở Port 8080.
+
+2. Chạy file [2_Run_Tracker_Server.bat]:
+   - Đợi khoảng 5s.
+   - Tracker quản lý P2P sẽ chạy ở Port 8081.
+
+3. Chạy file [3_Run_Client.bat]:
+   - Ứng dụng giao diện JavaFX sẽ hiện lên.
+   - Có thể chạy file này NHIỀU LẦN để mở nhiều Client giả lập (Mỗi client sẽ tự nhận Port P2P khác nhau: 6881, 6882...).
+
+
+BƯỚC 3: TEST
+
+1. Tại Client, nhấn nút "Download" với URL có sẵn.
+
+   
+2. Quan sát thanh tiến trình và LOG trong Terminal đen để thấy:
+ 
+
+--------------------------------------------------------------------------------
+- Nếu muốn đổi cấu hình IP (để chạy LAN 2 máy), hãy mở file [config.properties] bằng Notepad và sửa IP:
+  tracker.url=http://IP_MAY_SERVER:8081
+  origin.server.url=http://IP_MAY_SERVER:8080
+
